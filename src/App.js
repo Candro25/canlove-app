@@ -41,6 +41,8 @@ export default function CanLoveApp() {
   const [dailyLikesCount, setDailyLikesCount] = useState(0);
   const [showInterstitialAd, setShowInterstitialAd] = useState(false);
   const [profilesViewedCount, setProfilesViewedCount] = useState(0);
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
 
   const nameRef = useRef(null);
   const emailRef = useRef(null);
@@ -51,10 +53,16 @@ export default function CanLoveApp() {
   const chatEndRef = useRef(null);
   const messageInputRef = useRef(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
+useEffect(() => {
+  loadData();
+  
+  // Cargar Enzuzo
+  const script = document.createElement('script');
+  script.id = '__enzuzo-root-script';
+  script.src = 'https://app.enzuzo.com/scripts/privacy/633a02e8-c59c-11f0-87c6-eff356e3bad2';
+  script.async = true;
+  document.body.appendChild(script);
+}, []);
   useEffect(() => {
     if (selectedChat && chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -639,13 +647,10 @@ export default function CanLoveApp() {
           </div>
           <p className="text-center text-white text-sm mt-6 opacity-75">
             Al continuar, aceptas nuestros{' '}
-            <button onClick={() => setShowTerms(true)} className="underline hover:opacity-100">
-              términos y condiciones
-            </button>
             {' '}y{' '}
-            <button onClick={() => setShowPrivacyPolicy(true)} className="underline hover:opacity-100">
-              política de privacidad
-            </button>
+          <button onClick={() => setShowPrivacyPolicy(true)} className="underline hover:opacity-100 font-medium">
+            política de privacidad
+          </button>
           </p>
         </div>
       </div>
@@ -772,7 +777,6 @@ export default function CanLoveApp() {
         <PremiumModal />
         <MatchModal />
         <PrivacyPolicyModal />
-        <TermsModal />
         <div className="max-w-2xl mx-auto px-4 py-6 pb-24">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
@@ -1082,6 +1086,27 @@ export default function CanLoveApp() {
       </div>
     );
   }
+
+  const PrivacyPolicyModal = () => {
+  if (!showPrivacyPolicy) return null;
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-3xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-3xl font-bold text-gray-800">Política de Privacidad</h2>
+          <button onClick={() => setShowPrivacyPolicy(false)} className="text-gray-500 hover:text-gray-700">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+        <div id="__enzuzo-root"></div>
+        <button onClick={() => setShowPrivacyPolicy(false)} className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-white py-3 rounded-full font-bold mt-6 hover:shadow-xl transition-all">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  );
+};
+
 
   return null;
 }
