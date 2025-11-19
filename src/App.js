@@ -638,7 +638,14 @@ export default function CanLoveApp() {
             </button>
           </div>
           <p className="text-center text-white text-sm mt-6 opacity-75">
-            Al continuar, aceptas nuestros términos y condiciones
+            Al continuar, aceptas nuestros{' '}
+            <button onClick={() => setShowTerms(true)} className="underline hover:opacity-100">
+              términos y condiciones
+            </button>
+            {' '}y{' '}
+            <button onClick={() => setShowPrivacyPolicy(true)} className="underline hover:opacity-100">
+              política de privacidad
+            </button>
           </p>
         </div>
       </div>
@@ -764,6 +771,8 @@ export default function CanLoveApp() {
         <InterstitialAd />
         <PremiumModal />
         <MatchModal />
+        <PrivacyPolicyModal />
+        <TermsModal />
         <div className="max-w-2xl mx-auto px-4 py-6 pb-24">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
@@ -1034,9 +1043,18 @@ export default function CanLoveApp() {
               </button>
             </div>
           )}
-          <button onClick={handleLogout} className="w-full bg-red-500 text-white py-4 rounded-full font-bold hover:bg-red-600 transition-colors shadow-lg">
+          <button onClick={handleLogout} className="w-full bg-red-500 text-white py-4 rounded-full font-bold hover:bg-red-600 transition-colors shadow-lg mb-4">
             Cerrar Sesión
           </button>
+          <div className="flex justify-center gap-4 text-sm">
+            <button onClick={() => setShowPrivacyPolicy(true)} className="text-gray-600 hover:text-amber-600 underline">
+              Privacidad
+            </button>
+            <span className="text-gray-400">•</span>
+            <button onClick={() => setShowTerms(true)} className="text-gray-600 hover:text-amber-600 underline">
+              Términos
+            </button>
+          </div>
         </div>
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg">
           <div className="max-w-2xl mx-auto px-4 py-3">
