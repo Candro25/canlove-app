@@ -777,6 +777,8 @@ useEffect(() => {
         <PremiumModal />
         <MatchModal />
         <PrivacyPolicyModal />
+        <TermsModal />
+
         <div className="max-w-2xl mx-auto px-4 py-6 pb-24">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
@@ -1087,19 +1089,115 @@ useEffect(() => {
     );
   }
 
-  const PrivacyPolicyModal = () => {
+const PrivacyPolicyModal = () => {
+
+  // Hook SIEMPRE arriba
+  useEffect(() => {
+    if (!showPrivacyPolicy) return; // ← lógica condicional adentro del hook
+
+    const script = document.createElement("script");
+    script.src = "https://app.enzuzo.com/scripts/privacy/633a02e8-c59c-11f0-87c6-eff356e3bad2";
+    script.async = true;
+
+    script.onload = () => {
+      setTimeout(() => {
+        const generated = document.querySelector("#__enzuzo-root");
+        const modalContainer = document.querySelector("#enzuzo-privacy-container");
+
+        if (generated && modalContainer) {
+          modalContainer.innerHTML = generated.innerHTML;
+          generated.innerHTML = "";
+        }
+      }, 300);
+    };
+
+    document.body.appendChild(script);
+
+    return () => {
+      const generated = document.querySelector("#__enzuzo-root");
+      if (generated) generated.innerHTML = "";
+    };
+
+  }, [showPrivacyPolicy]);
+
   if (!showPrivacyPolicy) return null;
+
+  const close = () => setShowPrivacyPolicy(false);
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-3xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4" onClick={close}>
+      <div
+        className="bg-white rounded-3xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-3xl font-bold text-gray-800">Política de Privacidad</h2>
-          <button onClick={() => setShowPrivacyPolicy(false)} className="text-gray-500 hover:text-gray-700">
+          <button onClick={close} className="text-gray-500 hover:text-gray-700">
             <X className="w-6 h-6" />
           </button>
         </div>
-        <div id="__enzuzo-root"></div>
-        <button onClick={() => setShowPrivacyPolicy(false)} className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-white py-3 rounded-full font-bold mt-6 hover:shadow-xl transition-all">
+
+        <div id="enzuzo-privacy-container"></div>
+
+        <button onClick={close} className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-white py-3 rounded-full font-bold mt-6 hover:shadow-xl transition-all">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  );
+};
+  
+
+ const TermsModal = () => {
+
+  useEffect(() => {
+    if (!showTerms) return;
+
+    const script = document.createElement("script");
+    script.src = "https://app.enzuzo.com/scripts/privacy/633a02e8-c59c-11f0-87c6-eff356e3bad2";
+    script.async = true;
+
+    script.onload = () => {
+      setTimeout(() => {
+        const generated = document.querySelector("#__enzuzo-root");
+        const modalContainer = document.querySelector("#enzuzo-terms-container");
+
+        if (generated && modalContainer) {
+          modalContainer.innerHTML = generated.innerHTML;
+          generated.innerHTML = "";
+        }
+      }, 300);
+    };
+
+    document.body.appendChild(script);
+
+    return () => {
+      const generated = document.querySelector("#__enzuzo-root");
+      if (generated) generated.innerHTML = "";
+    };
+
+  }, [showTerms]);
+
+  if (!showTerms) return null;
+
+  const close = () => setShowTerms(false);
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4" onClick={close}>
+      <div
+        className="bg-white rounded-3xl p-8 max-w-xl w-full max-h-[75vh] overflow-y-auto shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-800">Términos y Condiciones</h2>
+          <button onClick={close} className="text-gray-500 hover:text-gray-700">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div id="enzuzo-terms-container"></div>
+
+        <button onClick={close} className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-white py-3 rounded-full font-bold mt-6 hover:shadow-xl transition-all">
           Cerrar
         </button>
       </div>
