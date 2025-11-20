@@ -13,10 +13,350 @@ const DEMO_USERS = [
   { name: 'Sofía Ramírez', age: '25', gender: 'mujer', bio: 'Bailarina de salsa. La música es mi vida 💃', photo: 'https://i.pravatar.cc/300?img=20' },
   { name: 'Roberto Torres', age: '29', gender: 'hombre', bio: 'Emprendedor tech. Startups y café ☕️', photo: 'https://i.pravatar.cc/300?img=33' },
   { name: 'Valentina Cruz', age: '22', gender: 'mujer', bio: 'Estudiante de medicina. Salvar vidas es mi pasión ❤️', photo: 'https://i.pravatar.cc/300?img=23' },
-  { name: 'Fernando Díaz', age: '31', gender: 'hombre', bio: 'Arquitecto. Construyo sueños, uno a la vez 🏗️', photo: 'https://i.pravatar.cc/300?img=51' }
+  { name: 'Fernando Díaz', age: '31', gender: 'hombre', bio: 'Arquitecto. Construyo sueños, uno a la vez 🗿', photo: 'https://i.pravatar.cc/300?img=51' }
 ];
 
-export default function CanLoveApp() {
+// Componente de Términos y Condiciones como página separada
+const TermsPage = () => {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 py-12 px-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <Heart className="w-8 h-8 text-red-500" fill="currentColor" />
+          </div>
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">CanLove</h1>
+        </div>
+
+        <div className="bg-white rounded-3xl shadow-xl p-8">
+          <h2 className="text-3xl font-bold text-gray-800 mb-6">Términos y Condiciones</h2>
+          
+          <div className="prose prose-amber max-w-none">
+            <h3 className="text-xl font-bold text-gray-800 mb-3">1. Aceptación de Términos</h3>
+            <p className="text-gray-600 mb-4">
+              Al acceder y usar CanLove, aceptas estar sujeto a estos Términos y Condiciones. Si no estás de acuerdo con alguna parte de estos términos, no debes usar nuestra aplicación.
+            </p>
+
+            <h3 className="text-xl font-bold text-gray-800 mb-3">2. Requisitos de Edad</h3>
+            <p className="text-gray-600 mb-4">
+              Debes tener al menos 18 años de edad para usar CanLove. Al crear una cuenta, confirmas que tienes la edad legal requerida.
+            </p>
+
+            <h3 className="text-xl font-bold text-gray-800 mb-3">3. Cuenta de Usuario</h3>
+            <p className="text-gray-600 mb-4">
+              Eres responsable de mantener la confidencialidad de tu cuenta y contraseña. Aceptas la responsabilidad de todas las actividades que ocurran bajo tu cuenta.
+            </p>
+
+            <h3 className="text-xl font-bold text-gray-800 mb-3">4. Conducta del Usuario</h3>
+            <p className="text-gray-600 mb-4">
+              Aceptas usar CanLove de manera respetuosa y legal. Está prohibido:
+            </p>
+            <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2">
+              <li>Acosar, intimidar o amenazar a otros usuarios</li>
+              <li>Publicar contenido ofensivo, difamatorio o ilegal</li>
+              <li>Hacerse pasar por otra persona</li>
+              <li>Usar la aplicación con fines comerciales sin autorización</li>
+              <li>Intentar acceder a cuentas de otros usuarios</li>
+            </ul>
+
+            <h3 className="text-xl font-bold text-gray-800 mb-3">5. Contenido del Usuario</h3>
+            <p className="text-gray-600 mb-4">
+              Conservas todos los derechos sobre el contenido que publicas en CanLove. Sin embargo, nos otorgas una licencia para usar, mostrar y distribuir tu contenido dentro de la aplicación.
+            </p>
+
+            <h3 className="text-xl font-bold text-gray-800 mb-3">6. Suscripción Premium</h3>
+            <p className="text-gray-600 mb-4">
+              La suscripción Premium se renueva automáticamente cada mes. Puedes cancelar en cualquier momento, pero no se realizarán reembolsos por períodos parciales.
+            </p>
+
+            <h3 className="text-xl font-bold text-gray-800 mb-3">7. Privacidad y Seguridad</h3>
+            <p className="text-gray-600 mb-4">
+              Tu privacidad es importante para nosotros. Consulta nuestra Política de Privacidad para entender cómo recopilamos, usamos y protegemos tu información personal.
+            </p>
+
+            <h3 className="text-xl font-bold text-gray-800 mb-3">8. Terminación</h3>
+            <p className="text-gray-600 mb-4">
+              Nos reservamos el derecho de suspender o terminar tu cuenta si violas estos términos o por cualquier otra razón que consideremos apropiada.
+            </p>
+
+            <h3 className="text-xl font-bold text-gray-800 mb-3">9. Limitación de Responsabilidad</h3>
+            <p className="text-gray-600 mb-4">
+              CanLove se proporciona "tal cual". No garantizamos que el servicio será ininterrumpido o libre de errores. No somos responsables de las interacciones entre usuarios.
+            </p>
+
+            <h3 className="text-xl font-bold text-gray-800 mb-3">10. Cambios a los Términos</h3>
+            <p className="text-gray-600 mb-4">
+              Podemos modificar estos términos en cualquier momento. Te notificaremos sobre cambios significativos. El uso continuado de la aplicación después de los cambios constituye tu aceptación.
+            </p>
+
+            <h3 className="text-xl font-bold text-gray-800 mb-3">11. Contacto</h3>
+            <p className="text-gray-600 mb-4">
+              Si tienes preguntas sobre estos Términos y Condiciones, contáctanos a través de soporte@canlove.com
+            </p>
+
+            <p className="text-sm text-gray-500 mt-6">
+              Última actualización: {new Date().toLocaleDateString('es-ES')}
+            </p>
+          </div>
+          
+          <a href="/" className="block w-full bg-gradient-to-r from-amber-400 to-orange-500 text-white py-3 rounded-full font-bold mt-6 hover:shadow-xl transition-all text-center">
+            Volver a CanLove
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const PrivacyPage = () => {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 py-12 px-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <Heart className="w-8 h-8 text-red-500" fill="currentColor" />
+          </div>
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">CanLove</h1>
+        </div>
+
+        <div className="bg-white rounded-3xl shadow-xl p-8">
+          <h2 className="text-3xl font-bold text-gray-800 mb-6">Política de Privacidad</h2>
+          
+          <div className="prose prose-amber max-w-none">
+            <p className="text-sm text-gray-500 mb-6">
+              <strong>Fecha de entrada en vigor:</strong> {new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </p>
+
+            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
+              <p className="text-sm text-blue-800">
+                <strong>Resumen:</strong> CanLove respeta tu privacidad. Recopilamos información necesaria para conectarte con otras personas. Usamos publicidad de Google AdSense. Nunca vendemos tus datos personales.
+              </p>
+            </div>
+
+            <h3 className="text-xl font-bold text-gray-800 mb-3 mt-6">1. Información que Recopilamos</h3>
+            
+            <h4 className="text-lg font-semibold text-gray-700 mb-2">1.1 Información que nos proporcionas directamente:</h4>
+            <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2 ml-4">
+              <li><strong>Información de registro:</strong> nombre, correo electrónico, contraseña, fecha de nacimiento, género</li>
+              <li><strong>Información de perfil:</strong> fotografías, biografía, preferencias de búsqueda</li>
+              <li><strong>Contenido del usuario:</strong> mensajes, likes, matches</li>
+              <li><strong>Información de pago:</strong> datos de tarjeta (procesados por terceros seguros)</li>
+            </ul>
+
+            <h4 className="text-lg font-semibold text-gray-700 mb-2">1.2 Información recopilada automáticamente:</h4>
+            <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2 ml-4">
+              <li><strong>Información del dispositivo:</strong> modelo, sistema operativo, identificadores únicos, configuración del dispositivo</li>
+              <li><strong>Datos de uso:</strong> funciones utilizadas, tiempo de uso, clics, páginas visitadas</li>
+              <li><strong>Información de ubicación:</strong> ubicación aproximada basada en dirección IP</li>
+              <li><strong>Cookies y tecnologías similares:</strong> identificadores de sesión, preferencias</li>
+            </ul>
+
+            <h3 className="text-xl font-bold text-gray-800 mb-3 mt-6">2. Cómo Utilizamos tu Información</h3>
+            <p className="text-gray-600 mb-2">Utilizamos tu información para:</p>
+            <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2 ml-4">
+              <li>Crear y gestionar tu cuenta</li>
+              <li>Facilitar matches y conexiones entre usuarios</li>
+              <li>Procesar transacciones y suscripciones Premium</li>
+              <li>Personalizar tu experiencia y recomendaciones</li>
+              <li>Enviar notificaciones sobre matches, mensajes y actualizaciones</li>
+              <li>Mejorar nuestros servicios mediante análisis y pruebas</li>
+              <li>Prevenir fraudes, spam y actividades ilegales</li>
+              <li>Cumplir con obligaciones legales</li>
+              <li>Mostrar publicidad relevante y medir su efectividad</li>
+            </ul>
+
+            <h3 className="text-xl font-bold text-gray-800 mb-3 mt-6">3. Publicidad y Google AdSense</h3>
+            <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 mb-4">
+              <h4 className="text-lg font-semibold text-gray-800 mb-2">3.1 Uso de Google AdSense</h4>
+              <p className="text-gray-600 mb-3">
+                CanLove utiliza Google AdSense para mostrar anuncios. Google utiliza cookies y tecnologías similares para:
+              </p>
+              <ul className="list-disc list-inside text-gray-600 mb-3 space-y-2 ml-4">
+                <li>Mostrar anuncios personalizados basados en tus visitas anteriores a nuestro sitio y otros sitios en Internet</li>
+                <li>Medir la efectividad de los anuncios</li>
+                <li>Prevenir el fraude publicitario</li>
+              </ul>
+              
+              <h4 className="text-lg font-semibold text-gray-800 mb-2">3.2 Cookies de Terceros</h4>
+              <p className="text-gray-600 mb-3">
+                Los proveedores externos, incluido Google, utilizan cookies para publicar anuncios basados en las visitas anteriores de un usuario a tu sitio web u otros sitios web. El uso de cookies publicitarias permite a Google y a sus socios publicar anuncios basándose en las visitas de los usuarios a nuestro sitio y/o a otros sitios de Internet.
+              </p>
+
+              <h4 className="text-lg font-semibold text-gray-800 mb-2">3.3 Control de Anuncios Personalizados</h4>
+              <p className="text-gray-600 mb-2">
+                Puedes inhabilitar el uso de cookies por parte de Google visitando:
+              </p>
+              <a href="https://www.google.com/settings/ads" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline block mb-2">
+                https://www.google.com/settings/ads
+              </a>
+              <p className="text-gray-600">
+                También puedes visitar <a href="http://www.aboutads.info" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">aboutads.info</a> para inhabilitar las cookies de otros proveedores.
+              </p>
+            </div>
+
+            <h3 className="text-xl font-bold text-gray-800 mb-3 mt-6">4. Compartir Información</h3>
+            
+            <h4 className="text-lg font-semibold text-gray-700 mb-2">4.1 Con otros usuarios:</h4>
+            <p className="text-gray-600 mb-3">
+              Tu perfil (nombre, edad, fotografías, biografía) es visible para otros usuarios de CanLove. Tú controlas qué información incluyes en tu perfil.
+            </p>
+
+            <h4 className="text-lg font-semibold text-gray-700 mb-2">4.2 Con proveedores de servicios:</h4>
+            <p className="text-gray-600 mb-2">Compartimos información con:</p>
+            <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2 ml-4">
+              <li><strong>Procesadores de pago:</strong> para procesar transacciones (no almacenamos datos completos de tarjetas)</li>
+              <li><strong>Servicios de hosting y almacenamiento:</strong> para almacenar datos de forma segura</li>
+              <li><strong>Servicios de análisis:</strong> para entender cómo se usa la aplicación</li>
+              <li><strong>Proveedores de publicidad:</strong> Google AdSense y sus socios</li>
+            </ul>
+
+            <h4 className="text-lg font-semibold text-gray-700 mb-2">4.3 Por motivos legales:</h4>
+            <p className="text-gray-600 mb-4">
+              Podemos divulgar información si lo requiere la ley, para proteger nuestros derechos, prevenir fraudes o proteger la seguridad de los usuarios.
+            </p>
+
+            <p className="text-gray-600 mb-4">
+              <strong>NO vendemos, alquilamos ni compartimos tu información personal con terceros para sus fines de marketing.</strong>
+            </p>
+
+            <h3 className="text-xl font-bold text-gray-800 mb-3 mt-6">5. Cookies y Tecnologías de Seguimiento</h3>
+            <p className="text-gray-600 mb-3">
+              Utilizamos las siguientes cookies:
+            </p>
+            <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2 ml-4">
+              <li><strong>Cookies esenciales:</strong> necesarias para el funcionamiento del sitio</li>
+              <li><strong>Cookies de rendimiento:</strong> para analizar el uso y mejorar servicios</li>
+              <li><strong>Cookies de funcionalidad:</strong> para recordar tus preferencias</li>
+              <li><strong>Cookies de publicidad:</strong> Google AdSense y socios para anuncios personalizados</li>
+            </ul>
+            <p className="text-gray-600 mb-4">
+              Puedes controlar las cookies desde la configuración de tu navegador. Ten en cuenta que deshabilitar ciertas cookies puede afectar la funcionalidad del sitio.
+            </p>
+
+            <h3 className="text-xl font-bold text-gray-800 mb-3 mt-6">6. Seguridad de los Datos</h3>
+            <p className="text-gray-600 mb-4">
+              Implementamos medidas de seguridad técnicas, administrativas y físicas para proteger tu información:
+            </p>
+            <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2 ml-4">
+              <li>Encriptación de datos sensibles (HTTPS/SSL)</li>
+              <li>Contraseñas encriptadas con algoritmos seguros</li>
+              <li>Acceso limitado a información personal solo para personal autorizado</li>
+              <li>Auditorías de seguridad regulares</li>
+              <li>Protección contra ataques DDoS y malware</li>
+            </ul>
+            <p className="text-gray-600 mb-4">
+              Sin embargo, ningún sistema es 100% seguro. Te recomendamos usar contraseñas fuertes y no compartirlas.
+            </p>
+
+            <h3 className="text-xl font-bold text-gray-800 mb-3 mt-6">7. Retención de Datos</h3>
+            <p className="text-gray-600 mb-4">
+              Conservamos tu información mientras tu cuenta esté activa o mientras sea necesario para proporcionar servicios. Puedes solicitar la eliminación de tu cuenta en cualquier momento. Después de eliminar tu cuenta:
+            </p>
+            <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2 ml-4">
+              <li>Tu perfil dejará de ser visible inmediatamente</li>
+              <li>Eliminaremos tus datos personales dentro de 30 días</li>
+              <li>Podemos conservar cierta información por obligaciones legales o para resolver disputas</li>
+            </ul>
+
+            <h3 className="text-xl font-bold text-gray-800 mb-3 mt-6">8. Tus Derechos y Opciones</h3>
+            <p className="text-gray-600 mb-2">Dependiendo de tu ubicación, puedes tener los siguientes derechos:</p>
+            <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2 ml-4">
+              <li><strong>Acceso:</strong> solicitar una copia de tu información personal</li>
+              <li><strong>Rectificación:</strong> corregir información inexacta o incompleta</li>
+              <li><strong>Eliminación:</strong> solicitar la eliminación de tu cuenta y datos ("derecho al olvido")</li>
+              <li><strong>Portabilidad:</strong> recibir tus datos en formato estructurado</li>
+              <li><strong>Oposición:</strong> oponerte al procesamiento de tus datos</li>
+              <li><strong>Restricción:</strong> limitar cómo usamos tu información</li>
+              <li><strong>Retirar consentimiento:</strong> donde el procesamiento se base en consentimiento</li>
+            </ul>
+            <p className="text-gray-600 mb-4">
+              Para ejercer estos derechos, contáctanos en <strong>privacidad@canlove.com</strong>
+            </p>
+
+            <h3 className="text-xl font-bold text-gray-800 mb-3 mt-6">9. Privacidad de Menores</h3>
+            <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+              <p className="text-gray-700 font-semibold mb-2">
+                CanLove está destinado EXCLUSIVAMENTE a personas mayores de 18 años.
+              </p>
+              <p className="text-gray-600">
+                No recopilamos intencionalmente información de menores de 18 años. Si descubrimos que hemos recopilado información de un menor, eliminaremos inmediatamente esa cuenta y todos los datos asociados. Si crees que tenemos información de un menor, contáctanos inmediatamente.
+              </p>
+            </div>
+
+            <h3 className="text-xl font-bold text-gray-800 mb-3 mt-6">10. Transferencias Internacionales</h3>
+            <p className="text-gray-600 mb-4">
+              Tu información puede ser transferida y almacenada en servidores ubicados fuera de tu país de residencia, donde las leyes de protección de datos pueden ser diferentes. Al usar CanLove, consientes estas transferencias. Implementamos salvaguardias adecuadas para proteger tu información, incluyendo cláusulas contractuales estándar aprobadas.
+            </p>
+
+            <h3 className="text-xl font-bold text-gray-800 mb-3 mt-6">11. Derechos Específicos por Región</h3>
+            
+            <h4 className="text-lg font-semibold text-gray-700 mb-2">11.1 Para residentes de la Unión Europea (GDPR):</h4>
+            <p className="text-gray-600 mb-3">
+              Tienes derecho a presentar una queja ante tu autoridad de protección de datos local. Nuestro representante en la UE puede ser contactado en: <strong>gdpr@canlove.com</strong>
+            </p>
+
+            <h4 className="text-lg font-semibold text-gray-700 mb-2">11.2 Para residentes de California (CCPA):</h4>
+            <p className="text-gray-600 mb-3">
+              Tienes derecho a saber qué información recopilamos, eliminarla y optar por no venderla (aunque no vendemos información personal). Para ejercer estos derechos, contáctanos en <strong>california@canlove.com</strong>
+            </p>
+
+            <h4 className="text-lg font-semibold text-gray-700 mb-2">11.3 Para residentes de Brasil (LGPD):</h4>
+            <p className="text-gray-600 mb-4">
+              Tienes derechos similares al GDPR. Contáctanos en <strong>lgpd@canlove.com</strong>
+            </p>
+
+            <h3 className="text-xl font-bold text-gray-800 mb-3 mt-6">12. Enlaces a Terceros</h3>
+            <p className="text-gray-600 mb-4">
+              CanLove puede contener enlaces a sitios web de terceros (incluidos anuncios de Google). No somos responsables de las prácticas de privacidad de estos sitios. Te recomendamos leer sus políticas de privacidad.
+            </p>
+
+            <h3 className="text-xl font-bold text-gray-800 mb-3 mt-6">13. Cambios a esta Política</h3>
+            <p className="text-gray-600 mb-4">
+              Podemos actualizar esta Política de Privacidad ocasionalmente para reflejar cambios en nuestras prácticas o por otros motivos operativos, legales o regulatorios. Te notificaremos sobre cambios materiales mediante:
+            </p>
+            <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2 ml-4">
+              <li>Un aviso destacado en la aplicación</li>
+              <li>Correo electrónico (si has proporcionado tu dirección)</li>
+              <li>Actualización de la fecha de "entrada en vigor" arriba</li>
+            </ul>
+            <p className="text-gray-600 mb-4">
+              Tu uso continuado de CanLove después de los cambios constituye tu aceptación de la política actualizada.
+            </p>
+
+            <h3 className="text-xl font-bold text-gray-800 mb-3 mt-6">14. Contacto</h3>
+            <p className="text-gray-600 mb-3">
+              Si tienes preguntas, inquietudes o solicitudes sobre esta Política de Privacidad o nuestras prácticas de datos, contáctanos:
+            </p>
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+              <p className="text-gray-700 mb-2"><strong>CanLove</strong></p>
+              <p className="text-gray-600 mb-1"><strong>Email:</strong> privcanlove@gmail.com</p>
+              <p className="text-gray-600 mb-1"><strong>Soporte:</strong> soportecanlove@gmail.com</p>
+              <p className="text-gray-600 mb-1"><strong>Dirección:</strong> Cra63c 96a -220</p>
+              <p className="text-gray-600"><strong>Teléfono:</strong> 3113684574</p>
+            </div>
+
+            <div className="bg-green-50 border-l-4 border-green-500 p-4 mt-6">
+              <p className="text-sm text-green-800">
+                <strong>✓ Cumplimiento:</strong> Esta Política de Privacidad cumple con GDPR (UE), CCPA (California), LGPD (Brasil), COPPA y requisitos de Google AdSense.
+              </p>
+            </div>
+
+            <p className="text-center text-sm text-gray-500 mt-8 pt-6 border-t border-gray-200">
+              © {new Date().getFullYear()} CanLove. Todos los derechos reservados.
+            </p>
+          </div>
+          
+          <a href="/" className="block w-full bg-gradient-to-r from-amber-400 to-orange-500 text-white py-3 rounded-full font-bold mt-6 hover:shadow-xl transition-all text-center">
+            Volver a CanLove
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Componente principal de la app
+function CanLoveApp() {
   const [currentView, setCurrentView] = useState('welcome');
   const [currentUser, setCurrentUser] = useState(null);
   const [users, setUsers] = useState([]);
@@ -41,8 +381,6 @@ export default function CanLoveApp() {
   const [dailyLikesCount, setDailyLikesCount] = useState(0);
   const [showInterstitialAd, setShowInterstitialAd] = useState(false);
   const [profilesViewedCount, setProfilesViewedCount] = useState(0);
-  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
-  const [showTerms, setShowTerms] = useState(false);
 
   const nameRef = useRef(null);
   const emailRef = useRef(null);
@@ -53,16 +391,10 @@ export default function CanLoveApp() {
   const chatEndRef = useRef(null);
   const messageInputRef = useRef(null);
 
-useEffect(() => {
-  loadData();
-  
-  // Cargar Enzuzo  
-  const script = document.createElement('script');
-  script.id = '__enzuzo-root-script';
-  script.src = 'https://app.enzuzo.com/scripts/privacy/633a02e8-c59c-11f0-87c6-eff356e3bad2';
-  script.async = true;
-  document.body.appendChild(script);
-}, []);
+  useEffect(() => {
+    loadData();
+  }, []);
+
   useEffect(() => {
     if (selectedChat && chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -529,111 +861,6 @@ useEffect(() => {
     );
   };
 
-const PrivacyPolicyModal = () => {
-  if (!showPrivacyPolicy) return null;
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-3xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-3xl font-bold text-gray-800">Política de Privacidad</h2>
-          <button onClick={() => setShowPrivacyPolicy(false)} className="text-gray-500 hover:text-gray-700">
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-        <div id="__enzuzo-root"></div>
-        <button onClick={() => setShowPrivacyPolicy(false)} className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-white py-3 rounded-full font-bold mt-6 hover:shadow-xl transition-all">
-          Cerrar
-        </button>
-      </div>
-    </div>
-  );
-};
-
-const TermsModal = () => {
-  if (!showTerms) return null;
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-3xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-3xl font-bold text-gray-800">Términos y Condiciones</h2>
-          <button onClick={() => setShowTerms(false)} className="text-gray-500 hover:text-gray-700">
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-        <div className="prose prose-amber max-w-none">
-          <h3 className="text-xl font-bold text-gray-800 mb-3">1. Aceptación de Términos</h3>
-          <p className="text-gray-600 mb-4">
-            Al acceder y usar CanLove, aceptas estar sujeto a estos Términos y Condiciones. Si no estás de acuerdo con alguna parte de estos términos, no debes usar nuestra aplicación.
-          </p>
-
-          <h3 className="text-xl font-bold text-gray-800 mb-3">2. Requisitos de Edad</h3>
-          <p className="text-gray-600 mb-4">
-            Debes tener al menos 18 años de edad para usar CanLove. Al crear una cuenta, confirmas que tienes la edad legal requerida.
-          </p>
-
-          <h3 className="text-xl font-bold text-gray-800 mb-3">3. Cuenta de Usuario</h3>
-          <p className="text-gray-600 mb-4">
-            Eres responsable de mantener la confidencialidad de tu cuenta y contraseña. Aceptas la responsabilidad de todas las actividades que ocurran bajo tu cuenta.
-          </p>
-
-          <h3 className="text-xl font-bold text-gray-800 mb-3">4. Conducta del Usuario</h3>
-          <p className="text-gray-600 mb-4">
-            Aceptas usar CanLove de manera respetuosa y legal. Está prohibido:
-          </p>
-          <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2">
-            <li>Acosar, intimidar o amenazar a otros usuarios</li>
-            <li>Publicar contenido ofensivo, difamatorio o ilegal</li>
-            <li>Hacerse pasar por otra persona</li>
-            <li>Usar la aplicación con fines comerciales sin autorización</li>
-            <li>Intentar acceder a cuentas de otros usuarios</li>
-          </ul>
-
-          <h3 className="text-xl font-bold text-gray-800 mb-3">5. Contenido del Usuario</h3>
-          <p className="text-gray-600 mb-4">
-            Conservas todos los derechos sobre el contenido que publicas en CanLove. Sin embargo, nos otorgas una licencia para usar, mostrar y distribuir tu contenido dentro de la aplicación.
-          </p>
-
-          <h3 className="text-xl font-bold text-gray-800 mb-3">6. Suscripción Premium</h3>
-          <p className="text-gray-600 mb-4">
-            La suscripción Premium se renueva automáticamente cada mes. Puedes cancelar en cualquier momento, pero no se realizarán reembolsos por períodos parciales.
-          </p>
-
-          <h3 className="text-xl font-bold text-gray-800 mb-3">7. Privacidad y Seguridad</h3>
-          <p className="text-gray-600 mb-4">
-            Tu privacidad es importante para nosotros. Consulta nuestra Política de Privacidad para entender cómo recopilamos, usamos y protegemos tu información personal.
-          </p>
-
-          <h3 className="text-xl font-bold text-gray-800 mb-3">8. Terminación</h3>
-          <p className="text-gray-600 mb-4">
-            Nos reservamos el derecho de suspender o terminar tu cuenta si violas estos términos o por cualquier otra razón que consideremos apropiada.
-          </p>
-
-          <h3 className="text-xl font-bold text-gray-800 mb-3">9. Limitación de Responsabilidad</h3>
-          <p className="text-gray-600 mb-4">
-            CanLove se proporciona "tal cual". No garantizamos que el servicio será ininterrumpido o libre de errores. No somos responsables de las interacciones entre usuarios.
-          </p>
-
-          <h3 className="text-xl font-bold text-gray-800 mb-3">10. Cambios a los Términos</h3>
-          <p className="text-gray-600 mb-4">
-            Podemos modificar estos términos en cualquier momento. Te notificaremos sobre cambios significativos. El uso continuado de la aplicación después de los cambios constituye tu aceptación.
-          </p>
-
-          <h3 className="text-xl font-bold text-gray-800 mb-3">11. Contacto</h3>
-          <p className="text-gray-600 mb-4">
-            Si tienes preguntas sobre estos Términos y Condiciones, contáctanos a través de soporte@canlove.com
-          </p>
-
-          <p className="text-sm text-gray-500 mt-6">
-            Última actualización: {new Date().toLocaleDateString('es-ES')}
-          </p>
-        </div>
-        <button onClick={() => setShowTerms(false)} className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-white py-3 rounded-full font-bold mt-6 hover:shadow-xl transition-all">
-          Cerrar
-        </button>
-      </div>
-    </div>
-  );
-};
   const VideoCallScreen = () => {
     const videoRef = useRef(null);
     useEffect(() => {
@@ -732,8 +959,6 @@ const TermsModal = () => {
   if (currentView === 'welcome') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-400 via-orange-400 to-red-400 flex items-center justify-center p-4">
-      <PrivacyPolicyModal />
-      <TermsModal />
         <div className="max-w-md w-full">
           <div className="text-center mb-8">
             <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-2xl">
@@ -752,19 +977,27 @@ const TermsModal = () => {
               Crear Cuenta
             </button>
           </div>
-        <p className="text-center text-white text-sm mt-6 opacity-75">
-  Al continuar, aceptas nuestros{' '}
-<button onClick={() => setShowTerms(true)} className="underline hover:opacity-100 font-medium">
-  términos y condiciones
-</button>
-{' '}y{' '}
-<button onClick={() => setShowPrivacyPolicy(true)} className="underline hover:opacity-100 font-medium">
-  política de privacidad
-</button>
-</p>
+          <p className="text-center text-white text-sm mt-6 opacity-75">
+            Al continuar, aceptas nuestros{' '}
+            <a href="#terminos" onClick={(e) => { e.preventDefault(); setCurrentView('terms'); }} className="underline hover:opacity-100 font-medium">
+              términos y condiciones
+            </a>
+            {' '}y{' '}
+            <a href="#privacidad" onClick={(e) => { e.preventDefault(); setCurrentView('privacy'); }} className="underline hover:opacity-100 font-medium">
+              política de privacidad
+            </a>
+          </p>
         </div>
       </div>
     );
+  }
+
+  if (currentView === 'terms') {
+    return <TermsPage />;
+  }
+
+  if (currentView === 'privacy') {
+    return <PrivacyPage />;
   }
 
   if (currentView === 'register') {
@@ -886,8 +1119,6 @@ const TermsModal = () => {
         <InterstitialAd />
         <PremiumModal />
         <MatchModal />
-        <PrivacyPolicyModal />
-        <TermsModal />
         
         <div className="max-w-2xl mx-auto px-4 py-6 pb-24">
           <div className="flex justify-between items-center mb-6">
@@ -980,12 +1211,10 @@ const TermsModal = () => {
     );
   }
 
-  if (currentView === 'matches') {
+if (currentView === 'matches') {
     const myMatches = users.filter(u => matches.includes(u.id));
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 pb-24">
-        <PrivacyPolicyModal />
-        <TermsModal />
         <VideoCallScreen />
         <div className="max-w-2xl mx-auto px-4 py-6">
           <h1 className="text-3xl font-bold text-gray-800 mb-6">Tus Matches</h1>
@@ -1165,11 +1394,11 @@ const TermsModal = () => {
             Cerrar Sesión
           </button>
           <div className="flex justify-center gap-4 text-sm">
-            <button onClick={() => setShowPrivacyPolicy(true)} className="text-gray-600 hover:text-amber-600 underline">
+            <button onClick={() => setCurrentView('privacy')} className="text-gray-600 hover:text-amber-600 underline">
               Privacidad
             </button>
             <span className="text-gray-400">•</span>
-            <button onClick={() => setShowTerms(true)} className="text-gray-600 hover:text-amber-600 underline">
+            <button onClick={() => setCurrentView('terms')} className="text-gray-600 hover:text-amber-600 underline">
               Términos
             </button>
           </div>
@@ -1201,7 +1430,7 @@ const TermsModal = () => {
     );
   }
 
-
-
-return null;
+  return null;
 }
+
+export default CanLoveApp;
