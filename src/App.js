@@ -54,20 +54,15 @@ export default function CanLoveApp() {
   const messageInputRef = useRef(null);
 
 useEffect(() => {
-  if (showPrivacyPolicy) {
-    const script = document.createElement('script');
-    script.id = '__enzuzo-root-script';
-    script.src = 'https://app.enzuzo.com/scripts/privacy/...';
-    script.async = true;
-    document.body.appendChild(script);
-  }
-
-  return () => {
-    const existing = document.getElementById('__enzuzo-root-script');
-    if (existing) existing.remove();
-  };
-}, [showPrivacyPolicy]);
-
+  loadData();
+  
+  // Cargar Enzuzo  
+  const script = document.createElement('script');
+  script.id = '__enzuzo-root-script';
+  script.src = 'https://app.enzuzo.com/scripts/privacy/633a02e8-c59c-11f0-87c6-eff356e3bad2';
+  script.async = true;
+  document.body.appendChild(script);
+}, []);
   useEffect(() => {
     if (selectedChat && chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
