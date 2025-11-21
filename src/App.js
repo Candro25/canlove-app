@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Heart, User, Mail, Calendar, Image, LogIn, UserPlus, Home, Sparkles, MessageCircle, X, Send, ArrowLeft, Video, Phone, Mic, MicOff, VideoOff, PhoneOff, Crown, Check, Star } from 'lucide-react';
 import Peer from 'peerjs';
 import { db } from './firebase';
-import { collection, addDoc, getDocs, query, where, updateDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, updateDoc, doc, getDoc } from 'firebase/firestore';
 
 const DEFAULT_PHOTO = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23FEF3C7" width="200" height="200"/%3E%3Ctext fill="%23D97706" font-family="sans-serif" font-size="16" dy="10.5" font-weight="bold" x="50%25" y="50%25" text-anchor="middle"%3ESin Foto%3C/text%3E%3C/svg%3E';
 
@@ -694,7 +694,7 @@ const handleLogout = () => {
   alert('Sesión cerrada');
 };
 
-const handleLike = () => {
+const handleLike = async () => {
   if (!isPremium) {
     const today = new Date().toDateString();
     const lastLikeDate = localStorage.getItem(`canlove_last_like_date_${currentUser.id}`);
@@ -710,27 +710,50 @@ const handleLike = () => {
     localStorage.setItem(`canlove_daily_likes_${currentUser.id}`, (currentCount + 1).toString());
     setDailyLikesCount(currentCount + 1);
   }
+  
   const availableProfiles = getAvailableProfiles();
   if (availableProfiles.length === 0) return;
   const likedUser = availableProfiles[currentProfileIndex];
   const newLikes = [...likes, likedUser.id];
-  const otherUserLikes = JSON.parse(localStorage.getItem(`canlove_likes_${likedUser.id}`) || '[]');
-  if (otherUserLikes.includes(currentUser.id)) {
-    const newMatches = [...matches, likedUser.id];
-    setMatches(newMatches);
-    setNewMatch(likedUser);
-    setShowMatchModal(true);
-    const otherUserMatches = JSON.parse(localStorage.getItem(`canlove_matches_${likedUser.id}`) || '[]');
-    localStorage.setItem(`canlove_matches_${likedUser.id}`, JSON.stringify([...otherUserMatches, currentUser.id]));
-    saveUserInteractions(currentUser.id, newLikes, passes, newMatches);
-  } else {
-    setLikes(newLikes);
-    saveUserInteractions(currentUser.id, newLikes, passes, matches);
+  
+  try {
+    // Obtener likes del otro usuario desde Firebase
+    const likedUserRef = doc(db, 'users', likedUser.id);
+    const likedUserDoc = await getDoc(likedUserRef);
+    const otherUserLikes = likedUserDoc.data()?.likes || [];
+    
+    // Actualizar likes del usuario actual en Firebase
+    const currentUserRef = doc(db, 'users', currentUser.id);
+    await updateDoc(currentUserRef, {
+      likes: newLikes
+    });
+    
+    // Verificar si hay match
+    if (otherUserLikes.includes(currentUser.id)) {
+      const newMatches = [...matches, likedUser.id];
+      setMatches(newMatches);
+      setNewMatch(likedUser);
+      setShowMatchModal(true);
+      
+      // Actualizar matches de ambos usuarios en Firebase
+      await updateDoc(currentUserRef, { matches: newMatches });
+      await updateDoc(likedUserRef, { 
+        matches: [...(likedUserDoc.data()?.matches || []), currentUser.id] 
+      });
+      
+      saveUserInteractions(currentUser.id, newLikes, passes, newMatches);
+    } else {
+      setLikes(newLikes);
+      saveUserInteractions(currentUser.id, newLikes, passes, matches);
+    }
+  } catch (error) {
+    console.error('Error al procesar like:', error);
+    alert('Error al dar like. Intenta de nuevo.');
   }
+  
   setCurrentProfileIndex(0);
   checkAndShowAd();
 };
-
   const handlePass = () => {
     const availableProfiles = getAvailableProfiles();
     if (availableProfiles.length === 0) return;
