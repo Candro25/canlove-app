@@ -833,19 +833,45 @@ const handleLike = async () => {
   }
 };
 
-  const markAsRead = (matchId) => {
+const markAsRead = async (matchId) => {  // ⬅️ Agregar async
+  try {
+    // Actualizar mensajes en Firebase
+    const messagesRef = collection(db, 'messages');
+    const q = query(
+      messagesRef, 
+      where('receiverId', '==', currentUser.id),
+      where('senderId', '==', matchId)
+    );
+    const snapshot = await getDocs(q);
+    
+    const updatePromises = [];
+    snapshot.forEach((docSnapshot) => {
+      if (!docSnapshot.data().read) {
+        updatePromises.push(
+          updateDoc(doc(db, 'messages', docSnapshot.id), { read: true })
+        );
+      }
+    });
+    
+    await Promise.all(updatePromises);
+    
+    // Actualizar estado local
     const myConvos = { ...conversations };
     if (myConvos[matchId]) {
       myConvos[matchId] = myConvos[matchId].map(msg => ({
         ...msg,
         read: msg.receiverId === currentUser.id ? true : msg.read
       }));
-      saveConversations(currentUser.id, myConvos);
-      const newUnread = { ...unreadCounts };
-      delete newUnread[matchId];
-      setUnreadCounts(newUnread);
+      setConversations(myConvos);
     }
-  };
+    
+    const newUnread = { ...unreadCounts };
+    delete newUnread[matchId];
+    setUnreadCounts(newUnread);
+  } catch (error) {
+    console.error('Error marcando como leído:', error);
+  }
+};
 
   const openChat = (match) => {
     setSelectedChat(match);
