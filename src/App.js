@@ -23,9 +23,9 @@ const TermsPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 py-12 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto mb-4">
-    <img src="/logo.png" alt="CanLove Logo" className="w-full h-full object-contain" />
-      </div>
+        <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full p-2 shadow-lg">
+        <img src="/logo.png" alt="CanLove Logo" className="w-full h-full object-contain" />
+        </div>
           <h1 className="text-4xl font-bold text-gray-800 mb-2">CanLove</h1>
         </div>
 
@@ -114,9 +114,9 @@ const PrivacyPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 py-12 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto mb-4">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full p-2 shadow-lg">
           <img src="/logo.png" alt="CanLove Logo" className="w-full h-full object-contain" />
-            </div>
+          </div>
           <h1 className="text-4xl font-bold text-gray-800 mb-2">CanLove</h1>
         </div>
 
