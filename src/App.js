@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Heart, User, Mail, Calendar, Image, LogIn, UserPlus, Home, Sparkles, MessageCircle, X, Send, ArrowLeft, Video, Phone, Mic, MicOff, VideoOff, PhoneOff, Crown, Check, Star } from 'lucide-react';
+import Peer from 'peerjs';
 
 const DEFAULT_PHOTO = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23FEF3C7" width="200" height="200"/%3E%3Ctext fill="%23D97706" font-family="sans-serif" font-size="16" dy="10.5" font-weight="bold" x="50%25" y="50%25" text-anchor="middle"%3ESin Foto%3C/text%3E%3C/svg%3E';
 
@@ -22,9 +23,9 @@ const TermsPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 py-12 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-            <Heart className="w-8 h-8 text-red-500" fill="currentColor" />
-          </div>
+          <div className="w-16 h-16 mx-auto mb-4">
+    <img src="/logo.png" alt="CanLove Logo" className="w-full h-full object-contain" />
+      </div>
           <h1 className="text-4xl font-bold text-gray-800 mb-2">CanLove</h1>
         </div>
 
@@ -113,9 +114,9 @@ const PrivacyPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 py-12 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-            <Heart className="w-8 h-8 text-red-500" fill="currentColor" />
-          </div>
+          <div className="w-16 h-16 mx-auto mb-4">
+          <img src="/logo.png" alt="CanLove Logo" className="w-full h-full object-contain" />
+            </div>
           <h1 className="text-4xl font-bold text-gray-800 mb-2">CanLove</h1>
         </div>
 
@@ -381,6 +382,10 @@ function CanLoveApp() {
   const [dailyLikesCount, setDailyLikesCount] = useState(0);
   const [showInterstitialAd, setShowInterstitialAd] = useState(false);
   const [profilesViewedCount, setProfilesViewedCount] = useState(0);
+  const [peer, setPeer] = useState(null);
+  const [myPeerId, setMyPeerId] = useState('');
+  const [remotePeerId, setRemotePeerId] = useState('');
+  const [currentCall, setCurrentCall] = useState(null);
 
   const nameRef = useRef(null);
   const emailRef = useRef(null);
@@ -498,10 +503,48 @@ function CanLoveApp() {
       setIsPremium(user.isPremium || false);
       loadUserInteractions(user.id);
       loadConversations(user.id);
-    } catch (error) {
-      console.error('Error guardando sesión:', error);
+    
+      if (!peer) {
+      const newPeer = new Peer(user.id, {
+        host: '0.peerjs.com',
+        port: 443,
+        path: '/',
+        secure: true
+      });
+      
+      newPeer.on('open', (id) => {
+        console.log('Mi Peer ID:', id);
+        setMyPeerId(id);
+      });
+      
+      // Recibir llamadas entrantes
+      newPeer.on('call', (call) => {
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+          .then((stream) => {
+            setLocalStream(stream);
+            call.answer(stream);
+            
+            call.on('stream', (remoteStream) => {
+              // El stream remoto se manejará en VideoCallScreen
+            });
+            
+            setCurrentCall(call);
+            setIsInCall(true);
+            setCallPartner(selectedChat);
+          })
+          .catch((err) => {
+            console.error('Error al responder llamada:', err);
+            alert('No se pudo acceder a la cámara/micrófono');
+          });
+      });
+      
+      setPeer(newPeer);
     }
-  };
+    
+  } catch (error) {
+    console.error('Error guardando sesión:', error);
+  }
+};
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -576,19 +619,25 @@ function CanLoveApp() {
   };
 
   const handleLogout = () => {
-    if (!window.confirm('¿Seguro que quieres cerrar sesión?')) return;
-    localStorage.removeItem('canlove_current_user');
-    setCurrentUser(null);
-    setLikes([]);
-    setPasses([]);
-    setMatches([]);
-    setConversations({});
-    setUnreadCounts({});
-    setIsPremium(false);
-    setDailyLikesCount(0);
-    setCurrentView('welcome');
-    alert('Sesión cerrada');
-  };
+  if (!window.confirm('¿Seguro que quieres cerrar sesión?')) return;
+  
+  if (peer) {
+    peer.destroy();
+    setPeer(null);
+  }
+  
+  localStorage.removeItem('canlove_current_user');
+  setCurrentUser(null);
+  setLikes([]);
+  setPasses([]);
+  setMatches([]);
+  setConversations({});
+  setUnreadCounts({});
+  setIsPremium(false);
+  setDailyLikesCount(0);
+  setCurrentView('welcome');
+  alert('Sesión cerrada');
+};
 
   const getAvailableProfiles = () => {
     return users.filter(u => u.id !== currentUser?.id && !likes.includes(u.id) && !passes.includes(u.id));
@@ -703,41 +752,88 @@ function CanLoveApp() {
     return Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
   };
 
-  const startVideoCall = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      setLocalStream(stream);
-      setIsInCall(true);
-      setCallPartner(selectedChat);
-      alert(`Llamando a ${selectedChat.name}...`);
-    } catch (error) {
-      alert('No se pudo acceder a la cámara/micrófono');
-    }
-  };
+ const startVideoCall = async () => {
+  if (!peer) {
+    alert('Conexión de red no disponible');
+    return;
+  }
+  
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    setLocalStream(stream);
+    
+    // Llamar al peer del otro usuario
+    const call = peer.call(selectedChat.id, stream);
+    
+    call.on('stream', (remoteStream) => {
+      // El stream remoto se manejará en VideoCallScreen
+      console.log('Stream remoto recibido');
+    });
+    
+    call.on('close', () => {
+      endCall();
+    });
+    
+    setCurrentCall(call);
+    setIsInCall(true);
+    setCallPartner(selectedChat);
+    
+    // Enviar notificación al otro usuario
+    alert(`Llamando a ${selectedChat.name}...`);
+  } catch (error) {
+    console.error('Error en videollamada:', error);
+    alert('No se pudo acceder a la cámara/micrófono');
+  }
+};
 
   const startAudioCall = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
-      setLocalStream(stream);
-      setIsInCall(true);
-      setIsVideoOff(true);
-      setCallPartner(selectedChat);
-      alert(`Llamando a ${selectedChat.name}...`);
-    } catch (error) {
-      alert('No se pudo acceder al micrófono');
-    }
-  };
-
+  if (!peer) {
+    alert('Conexión de red no disponible');
+    return;
+  }
+  
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+    setLocalStream(stream);
+    
+    // Llamar al peer del otro usuario
+    const call = peer.call(selectedChat.id, stream);
+    
+    call.on('stream', (remoteStream) => {
+      console.log('Audio remoto recibido');
+    });
+    
+    call.on('close', () => {
+      endCall();
+    });
+    
+    setCurrentCall(call);
+    setIsInCall(true);
+    setIsVideoOff(true);
+    setCallPartner(selectedChat);
+    
+    alert(`Llamando a ${selectedChat.name}...`);
+  } catch (error) {
+    console.error('Error en llamada de audio:', error);
+    alert('No se pudo acceder al micrófono');
+  }
+};
   const endCall = () => {
-    if (localStream) {
-      localStream.getTracks().forEach(track => track.stop());
-    }
-    setLocalStream(null);
-    setIsInCall(false);
-    setIsMuted(false);
-    setIsVideoOff(false);
-    setCallPartner(null);
-  };
+  if (localStream) {
+    localStream.getTracks().forEach(track => track.stop());
+  }
+  
+  if (currentCall) {
+    currentCall.close();
+  }
+  
+  setLocalStream(null);
+  setCurrentCall(null);
+  setIsInCall(false);
+  setIsMuted(false);
+  setIsVideoOff(false);
+  setCallPartner(null);
+};
 
   const toggleMute = () => {
     if (localStream) {
@@ -862,56 +958,68 @@ function CanLoveApp() {
   };
 
   const VideoCallScreen = () => {
-    const videoRef = useRef(null);
-    useEffect(() => {
-      if (localStream && videoRef.current && !isVideoOff) {
-        videoRef.current.srcObject = localStream;
-      }
-    }, [localStream, isVideoOff]);
-    if (!isInCall || !callPartner) return null;
-    return (
-      <div className="fixed inset-0 bg-black z-50 flex flex-col">
-        <div className="bg-gradient-to-b from-black to-transparent p-6 text-white">
-          <div className="text-center">
-            <img src={callPartner.photo} alt={callPartner.name} className="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-amber-400 shadow-lg" />
-            <h2 className="text-2xl font-bold">{callPartner.name}</h2>
-            <p className="text-sm opacity-75">En llamada...</p>
-          </div>
-        </div>
-        <div className="flex-1 flex items-center justify-center relative">
-          {isVideoOff ? (
-            <div className="text-center">
-              <div className="w-32 h-32 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                <User className="w-16 h-16 text-gray-500" />
-              </div>
-              <p className="text-white">Cámara desactivada</p>
-            </div>
-          ) : (
-            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-          )}
-          {!isVideoOff && (
-            <div className="absolute top-4 right-4 w-32 h-48 bg-gray-900 rounded-lg overflow-hidden shadow-2xl border-2 border-amber-400">
-              <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1]" />
-            </div>
-          )}
-        </div>
-        <div className="bg-gradient-to-t from-black to-transparent p-8">
-          <div className="flex justify-center gap-4">
-            <button onClick={toggleMute} className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 transform hover:scale-110 ${isMuted ? 'bg-red-500' : 'bg-gray-700 hover:bg-gray-600'}`}>
-              {isMuted ? <MicOff className="w-6 h-6 text-white" /> : <Mic className="w-6 h-6 text-white" />}
-            </button>
-            <button onClick={toggleVideo} className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 transform hover:scale-110 ${isVideoOff ? 'bg-red-500' : 'bg-gray-700 hover:bg-gray-600'}`}>
-              {isVideoOff ? <VideoOff className="w-6 h-6 text-white" /> : <Video className="w-6 h-6 text-white" />}
-            </button>
-            <button onClick={endCall} className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-all duration-300 transform hover:scale-110 shadow-xl">
-              <PhoneOff className="w-8 h-8 text-white" />
-            </button>
-          </div>
+  const videoRef = useRef(null);
+  const remoteVideoRef = useRef(null);
+  
+  useEffect(() => {
+    if (localStream && videoRef.current && !isVideoOff) {
+      videoRef.current.srcObject = localStream;
+    }
+    
+    // Manejar el stream remoto
+    if (currentCall) {
+      currentCall.on('stream', (remoteStream) => {
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = remoteStream;
+        }
+      });
+    }
+  }, [localStream, isVideoOff, currentCall]);
+  
+  if (!isInCall || !callPartner) return null;
+  
+  return (
+    <div className="fixed inset-0 bg-black z-50 flex flex-col">
+      <div className="bg-gradient-to-b from-black to-transparent p-6 text-white">
+        <div className="text-center">
+          <img src={callPartner.photo} alt={callPartner.name} className="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-amber-400 shadow-lg" />
+          <h2 className="text-2xl font-bold">{callPartner.name}</h2>
+          <p className="text-sm opacity-75">En llamada...</p>
         </div>
       </div>
-    );
-  };
-
+      <div className="flex-1 flex items-center justify-center relative">
+        {isVideoOff ? (
+          <div className="text-center">
+            <div className="w-32 h-32 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+              <User className="w-16 h-16 text-gray-500" />
+            </div>
+            <p className="text-white">Cámara desactivada</p>
+          </div>
+        ) : (
+          <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+        )}
+        {!isVideoOff && (
+          <div className="absolute top-4 right-4 w-32 h-48 bg-gray-900 rounded-lg overflow-hidden shadow-2xl border-2 border-amber-400">
+            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1]" />
+          </div>
+        )}
+      </div>
+      <div className="bg-gradient-to-t from-black to-transparent p-8">
+        <div className="flex justify-center gap-4">
+          <button onClick={toggleMute} className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 transform hover:scale-110 ${isMuted ? 'bg-red-500' : 'bg-gray-700 hover:bg-gray-600'}`}>
+            {isMuted ? <MicOff className="w-6 h-6 text-white" /> : <Mic className="w-6 h-6 text-white" />}
+          </button>
+          <button onClick={toggleVideo} className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 transform hover:scale-110 ${isVideoOff ? 'bg-red-500' : 'bg-gray-700 hover:bg-gray-600'}`}>
+            {isVideoOff ? <VideoOff className="w-6 h-6 text-white" /> : <Video className="w-6 h-6 text-white" />}
+          </button>
+          <button onClick={endCall} className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-all duration-300 transform hover:scale-110 shadow-xl">
+            <PhoneOff className="w-8 h-8 text-white" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
   const MatchModal = () => {
     if (!showMatchModal || !newMatch) return null;
     return (
@@ -961,9 +1069,9 @@ function CanLoveApp() {
       <div className="min-h-screen bg-gradient-to-br from-amber-400 via-orange-400 to-red-400 flex items-center justify-center p-4">
         <div className="max-w-md w-full">
           <div className="text-center mb-8">
-            <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-2xl">
-              <Heart className="w-12 h-12 text-red-500" fill="currentColor" />
-            </div>
+          <div className="w-44 h-44 mx-auto mb-4">
+          <img src="/logo.png" alt="CanLove Logo" className="w-full h-full object-contain drop-shadow-2xl" />
+        </div>
             <h1 className="text-5xl font-bold text-white mb-2 drop-shadow-lg">CanLove</h1>
             <p className="text-white text-lg opacity-90">Encuentra tu media naranja 🍊</p>
           </div>
