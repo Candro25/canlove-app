@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Heart, User, Mail, Calendar, Image, LogIn, UserPlus, Home, Sparkles, MessageCircle, X, Send, ArrowLeft, Video, Phone, Mic, MicOff, VideoOff, PhoneOff, Crown, Check, Star } from 'lucide-react';
 import Peer from 'peerjs';
+import { db } from './firebase';
+import { collection, addDoc, getDocs, query, where, updateDoc, doc } from 'firebase/firestore';
 
 const DEFAULT_PHOTO = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23FEF3C7" width="200" height="200"/%3E%3Ctext fill="%23D97706" font-family="sans-serif" font-size="16" dy="10.5" font-weight="bold" x="50%25" y="50%25" text-anchor="middle"%3ESin Foto%3C/text%3E%3C/svg%3E';
 
@@ -412,36 +414,46 @@ function CanLoveApp() {
     }
   }, [selectedChat]);
 
-  const loadData = () => {
-    try {
-      let savedUsers = localStorage.getItem('canlove_users');
-      if (!savedUsers) {
-        const demoUsersWithIds = DEMO_USERS.map((user, index) => ({
-          id: `demo_${Date.now()}_${index}`,
-          ...user,
-          email: `${user.name.toLowerCase().replace(' ', '')}@demo.com`,
-          password: '123456',
-          createdAt: new Date().toISOString()
-        }));
-        localStorage.setItem('canlove_users', JSON.stringify(demoUsersWithIds));
-        setUsers(demoUsersWithIds);
-      } else {
-        setUsers(JSON.parse(savedUsers));
-      }
-      const savedCurrentUser = localStorage.getItem('canlove_current_user');
-      if (savedCurrentUser) {
-        const userData = JSON.parse(savedCurrentUser);
-        setCurrentUser(userData);
-        setCurrentView('discover');
-        setIsPremium(userData.isPremium || false);
-        loadUserInteractions(userData.id);
-        loadConversations(userData.id);
-      }
-    } catch (error) {
-      console.error('Error cargando datos:', error);
+const loadUsersFromFirebase = async () => {
+  try {
+    const usersRef = collection(db, 'users');
+    const querySnapshot = await getDocs(usersRef);
+    
+    const allUsers = [];
+    querySnapshot.forEach((doc) => {
+      allUsers.push({ id: doc.id, ...doc.data() });
+    });
+    
+    setUsers(allUsers);
+  } catch (error) {
+    console.error('Error cargando usuarios:', error);
+  }
+};
+
+  const loadData = async () => {
+  try {
+    // Cargar usuarios desde Firebase
+    await loadUsersFromFirebase();
+    
+    // Verificar si hay sesión guardada
+    const savedCurrentUser = localStorage.getItem('canlove_current_user');
+    if (savedCurrentUser) {
+      const userData = JSON.parse(savedCurrentUser);
+      setCurrentUser(userData);
+      setCurrentView('discover');
+      setIsPremium(userData.isPremium || false);
+      loadUserInteractions(userData.id);
+      loadConversations(userData.id);
     }
-    setLoading(false);
-  };
+  } catch (error) {
+    console.error('Error cargando datos:', error);
+  }
+  setLoading(false);
+};
+
+const getAvailableProfiles = () => {
+  return users.filter(u => u.id !== currentUser?.id && !likes.includes(u.id) && !passes.includes(u.id));
+};
 
   const loadUserInteractions = (userId) => {
     try {
@@ -487,14 +499,6 @@ function CanLoveApp() {
     setConversations(convos);
   };
 
-  const saveUsers = (newUsers) => {
-    try {
-      localStorage.setItem('canlove_users', JSON.stringify(newUsers));
-      setUsers(newUsers);
-    } catch (error) {
-      console.error('Error guardando usuarios:', error);
-    }
-  };
 
   const saveCurrentUser = (user) => {
     try {
@@ -555,44 +559,63 @@ function CanLoveApp() {
     }
   };
 
-  const handleRegister = () => {
-    const name = nameRef.current?.value?.trim() || '';
-    const email = emailRef.current?.value?.trim() || '';
-    const password = passwordRef.current?.value || '';
-    const age = ageRef.current?.value || '';
-    const gender = genderRef.current?.value || '';
-    const bio = bioRef.current?.value?.trim() || '';
+  const handleRegister = async () => {
+  const name = nameRef.current?.value?.trim() || '';
+  const email = emailRef.current?.value?.trim() || '';
+  const password = passwordRef.current?.value || '';
+  const age = ageRef.current?.value || '';
+  const gender = genderRef.current?.value || '';
+  const bio = bioRef.current?.value?.trim() || '';
 
-    if (!name || !email || !age || !gender || !password) {
-      alert('Por favor completa todos los campos obligatorios');
-      return;
-    }
-    if (parseInt(age) < 18) {
-      alert('Debes ser mayor de 18 años');
-      return;
-    }
-    if (password.length < 6) {
-      alert('La contraseña debe tener mínimo 6 caracteres');
-      return;
-    }
-    if (users.find(u => u.email === email)) {
+  if (!name || !email || !age || !gender || !password) {
+    alert('Por favor completa todos los campos obligatorios');
+    return;
+  }
+  if (parseInt(age) < 18) {
+    alert('Debes ser mayor de 18 años');
+    return;
+  }
+  if (password.length < 6) {
+    alert('La contraseña debe tener mínimo 6 caracteres');
+    return;
+  }
+
+  try {
+    // Verificar si el email ya existe
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('email', '==', email));
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
       alert('Este email ya está registrado');
       return;
     }
 
+    // Crear nuevo usuario en Firebase
     const newUser = {
-      id: Date.now().toString(),
-      name, email, password, age, gender, bio,
+      name,
+      email,
+      password, // En producción deberías encriptar esto
+      age,
+      gender,
+      bio,
       photo: photoPreview || DEFAULT_PHOTO,
       createdAt: new Date().toISOString(),
       isPremium: false,
       premiumUntil: null
     };
 
-    const updatedUsers = [...users, newUser];
-    saveUsers(updatedUsers);
-    saveCurrentUser(newUser);
+    const docRef = await addDoc(collection(db, 'users'), newUser);
+    newUser.id = docRef.id;
+
+    // Guardar en localStorage solo la sesión actual
+    localStorage.setItem('canlove_current_user', JSON.stringify(newUser));
+    setCurrentUser(newUser);
+    setIsPremium(false);
+    
     alert(`¡Bienvenido ${newUser.name}!`);
+    
+    // Limpiar campos
     if (nameRef.current) nameRef.current.value = '';
     if (emailRef.current) emailRef.current.value = '';
     if (passwordRef.current) passwordRef.current.value = '';
@@ -601,24 +624,56 @@ function CanLoveApp() {
     if (bioRef.current) bioRef.current.value = '';
     setPhotoPreview('');
     setCurrentView('discover');
-  };
+    
+    // Cargar todos los usuarios
+    await loadUsersFromFirebase();
+  } catch (error) {
+    console.error('Error al registrar:', error);
+    alert('Error al crear cuenta. Intenta de nuevo.');
+  }
+};
 
-  const handleLogin = () => {
-    const email = emailRef.current?.value?.trim() || '';
-    const password = passwordRef.current?.value || '';
-    const user = users.find(u => u.email === email && u.password === password);
-    if (user) {
-      saveCurrentUser(user);
-      if (emailRef.current) emailRef.current.value = '';
-      if (passwordRef.current) passwordRef.current.value = '';
-      setCurrentView('discover');
-      alert(`¡Bienvenido de nuevo ${user.name}!`);
-    } else {
+  const handleLogin = async () => {
+  const email = emailRef.current?.value?.trim() || '';
+  const password = passwordRef.current?.value || '';
+
+  if (!email || !password) {
+    alert('Por favor completa todos los campos');
+    return;
+  }
+
+  try {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('email', '==', email), where('password', '==', password));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
       alert('Email o contraseña incorrectos');
+      return;
     }
-  };
 
-  const handleLogout = () => {
+    const userDoc = querySnapshot.docs[0];
+    const user = { id: userDoc.id, ...userDoc.data() };
+
+    localStorage.setItem('canlove_current_user', JSON.stringify(user));
+    setCurrentUser(user);
+    setIsPremium(user.isPremium || false);
+    
+    if (emailRef.current) emailRef.current.value = '';
+    if (passwordRef.current) passwordRef.current.value = '';
+    
+    setCurrentView('discover');
+    alert(`¡Bienvenido de nuevo ${user.name}!`);
+    
+    // Cargar todos los usuarios
+    await loadUsersFromFirebase();
+  } catch (error) {
+    console.error('Error al iniciar sesión:', error);
+    alert('Error al iniciar sesión. Intenta de nuevo.');
+  }
+};
+
+const handleLogout = () => {
   if (!window.confirm('¿Seguro que quieres cerrar sesión?')) return;
   
   if (peer) {
@@ -639,46 +694,42 @@ function CanLoveApp() {
   alert('Sesión cerrada');
 };
 
-  const getAvailableProfiles = () => {
-    return users.filter(u => u.id !== currentUser?.id && !likes.includes(u.id) && !passes.includes(u.id));
-  };
-
-  const handleLike = () => {
-    if (!isPremium) {
-      const today = new Date().toDateString();
-      const lastLikeDate = localStorage.getItem(`canlove_last_like_date_${currentUser.id}`);
-      if (lastLikeDate !== today) {
-        setDailyLikesCount(0);
-        localStorage.setItem(`canlove_last_like_date_${currentUser.id}`, today);
-      }
-      const currentCount = parseInt(localStorage.getItem(`canlove_daily_likes_${currentUser.id}`) || '0');
-      if (currentCount >= 10) {
-        setShowPremiumModal(true);
-        return;
-      }
-      localStorage.setItem(`canlove_daily_likes_${currentUser.id}`, (currentCount + 1).toString());
-      setDailyLikesCount(currentCount + 1);
+const handleLike = () => {
+  if (!isPremium) {
+    const today = new Date().toDateString();
+    const lastLikeDate = localStorage.getItem(`canlove_last_like_date_${currentUser.id}`);
+    if (lastLikeDate !== today) {
+      setDailyLikesCount(0);
+      localStorage.setItem(`canlove_last_like_date_${currentUser.id}`, today);
     }
-    const availableProfiles = getAvailableProfiles();
-    if (availableProfiles.length === 0) return;
-    const likedUser = availableProfiles[currentProfileIndex];
-    const newLikes = [...likes, likedUser.id];
-    const otherUserLikes = JSON.parse(localStorage.getItem(`canlove_likes_${likedUser.id}`) || '[]');
-    if (otherUserLikes.includes(currentUser.id)) {
-      const newMatches = [...matches, likedUser.id];
-      setMatches(newMatches);
-      setNewMatch(likedUser);
-      setShowMatchModal(true);
-      const otherUserMatches = JSON.parse(localStorage.getItem(`canlove_matches_${likedUser.id}`) || '[]');
-      localStorage.setItem(`canlove_matches_${likedUser.id}`, JSON.stringify([...otherUserMatches, currentUser.id]));
-      saveUserInteractions(currentUser.id, newLikes, passes, newMatches);
-    } else {
-      setLikes(newLikes);
-      saveUserInteractions(currentUser.id, newLikes, passes, matches);
+    const currentCount = parseInt(localStorage.getItem(`canlove_daily_likes_${currentUser.id}`) || '0');
+    if (currentCount >= 10) {
+      setShowPremiumModal(true);
+      return;
     }
-    setCurrentProfileIndex(0);
-    checkAndShowAd();
-  };
+    localStorage.setItem(`canlove_daily_likes_${currentUser.id}`, (currentCount + 1).toString());
+    setDailyLikesCount(currentCount + 1);
+  }
+  const availableProfiles = getAvailableProfiles();
+  if (availableProfiles.length === 0) return;
+  const likedUser = availableProfiles[currentProfileIndex];
+  const newLikes = [...likes, likedUser.id];
+  const otherUserLikes = JSON.parse(localStorage.getItem(`canlove_likes_${likedUser.id}`) || '[]');
+  if (otherUserLikes.includes(currentUser.id)) {
+    const newMatches = [...matches, likedUser.id];
+    setMatches(newMatches);
+    setNewMatch(likedUser);
+    setShowMatchModal(true);
+    const otherUserMatches = JSON.parse(localStorage.getItem(`canlove_matches_${likedUser.id}`) || '[]');
+    localStorage.setItem(`canlove_matches_${likedUser.id}`, JSON.stringify([...otherUserMatches, currentUser.id]));
+    saveUserInteractions(currentUser.id, newLikes, passes, newMatches);
+  } else {
+    setLikes(newLikes);
+    saveUserInteractions(currentUser.id, newLikes, passes, matches);
+  }
+  setCurrentProfileIndex(0);
+  checkAndShowAd();
+};
 
   const handlePass = () => {
     const availableProfiles = getAvailableProfiles();
@@ -864,7 +915,7 @@ function CanLoveApp() {
         premiumUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
       };
       const updatedUsers = users.map(u => u.id === currentUser.id ? updatedUser : u);
-      saveUsers(updatedUsers);
+  
       saveCurrentUser(updatedUser);
       setShowPremiumModal(false);
       alert('🎉 ¡Bienvenido a Premium!');
