@@ -455,58 +455,91 @@ const getAvailableProfiles = () => {
   return users.filter(u => u.id !== currentUser?.id && !likes.includes(u.id) && !passes.includes(u.id));
 };
 
-  const loadUserInteractions = (userId) => {
-    try {
-      const savedLikes = localStorage.getItem(`canlove_likes_${userId}`);
-      const savedPasses = localStorage.getItem(`canlove_passes_${userId}`);
-      const savedMatches = localStorage.getItem(`canlove_matches_${userId}`);
-      if (savedLikes) setLikes(JSON.parse(savedLikes));
-      if (savedPasses) setPasses(JSON.parse(savedPasses));
-      if (savedMatches) setMatches(JSON.parse(savedMatches));
-      const currentCount = parseInt(localStorage.getItem(`canlove_daily_likes_${userId}`) || '0');
-      setDailyLikesCount(currentCount);
-    } catch (error) {
-      console.error('Error cargando interacciones:', error);
+const loadUserInteractions = async (userId) => {
+  try {
+    const userRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userRef);
+    
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      setLikes(userData.likes || []);
+      setPasses(userData.passes || []);
+      setMatches(userData.matches || []);
     }
-  };
-
-  const loadConversations = (userId) => {
-    try {
-      const savedConversations = localStorage.getItem(`canlove_conversations_${userId}`);
-      if (savedConversations) {
-        const convos = JSON.parse(savedConversations);
-        setConversations(convos);
-        const unread = {};
-        Object.keys(convos).forEach(matchId => {
-          const unreadCount = convos[matchId].filter(msg => !msg.read && msg.senderId !== userId).length;
-          if (unreadCount > 0) unread[matchId] = unreadCount;
-        });
-        setUnreadCounts(unread);
-      }
-    } catch (error) {
-      console.error('Error cargando conversaciones:', error);
-    }
-  };
-
-  const saveUserInteractions = (userId, newLikes, newPasses, newMatches) => {
-    localStorage.setItem(`canlove_likes_${userId}`, JSON.stringify(newLikes));
-    localStorage.setItem(`canlove_passes_${userId}`, JSON.stringify(newPasses));
-    localStorage.setItem(`canlove_matches_${userId}`, JSON.stringify(newMatches));
-  };
-
-  const saveConversations = (userId, convos) => {
-    localStorage.setItem(`canlove_conversations_${userId}`, JSON.stringify(convos));
+    
+    const currentCount = parseInt(localStorage.getItem(`canlove_daily_likes_${userId}`) || '0');
+    setDailyLikesCount(currentCount);
+  } catch (error) {
+    console.error('Error cargando interacciones:', error);
+  }
+};
+  const loadConversations = async (userId) => {
+  try {
+    const messagesRef = collection(db, 'messages');
+    const q1 = query(messagesRef, where('senderId', '==', userId));
+    const q2 = query(messagesRef, where('receiverId', '==', userId));
+    
+    const [sentSnapshot, receivedSnapshot] = await Promise.all([
+      getDocs(q1),
+      getDocs(q2)
+    ]);
+    
+    const allMessages = [];
+    sentSnapshot.forEach(doc => allMessages.push({ id: doc.id, ...doc.data() }));
+    receivedSnapshot.forEach(doc => allMessages.push({ id: doc.id, ...doc.data() }));
+    
+    // Organizar por conversación
+    const convos = {};
+    allMessages.forEach(msg => {
+      const otherUserId = msg.senderId === userId ? msg.receiverId : msg.senderId;
+      if (!convos[otherUserId]) convos[otherUserId] = [];
+      convos[otherUserId].push(msg);
+    });
+    
+    // Ordenar mensajes por timestamp
+    Object.keys(convos).forEach(key => {
+      convos[key].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    });
+    
     setConversations(convos);
-  };
+    
+    // Calcular no leídos
+    const unread = {};
+    Object.keys(convos).forEach(matchId => {
+      const unreadCount = convos[matchId].filter(msg => !msg.read && msg.receiverId === userId).length;
+      if (unreadCount > 0) unread[matchId] = unreadCount;
+    });
+    setUnreadCounts(unread);
+  } catch (error) {
+    console.error('Error cargando conversaciones:', error);
+  }
+};
 
+  const saveUserInteractions = async (userId, newLikes, newPasses, newMatches) => {
+  try {
+    const userRef = doc(db, 'users', userId);
+    await updateDoc(userRef, {
+      likes: newLikes,
+      passes: newPasses,
+      matches: newMatches
+    });
+    
+    // También actualizar estado local
+    setLikes(newLikes);
+    setPasses(newPasses);
+    setMatches(newMatches);
+  } catch (error) {
+    console.error('Error guardando interacciones:', error);
+  }
+};
 
-  const saveCurrentUser = (user) => {
+  const saveCurrentUser = async (user) => {
     try {
       localStorage.setItem('canlove_current_user', JSON.stringify(user));
       setCurrentUser(user);
       setIsPremium(user.isPremium || false);
-      loadUserInteractions(user.id);
-      loadConversations(user.id);
+     await loadUserInteractions(user.id);
+    await loadConversations(user.id);
     
       if (!peer) {
       const newPeer = new Peer(user.id, {
@@ -592,25 +625,28 @@ const getAvailableProfiles = () => {
     }
 
     // Crear nuevo usuario en Firebase
-    const newUser = {
-      name,
-      email,
-      password, // En producción deberías encriptar esto
-      age,
-      gender,
-      bio,
-      photo: photoPreview || DEFAULT_PHOTO,
-      createdAt: new Date().toISOString(),
-      isPremium: false,
-      premiumUntil: null
-    };
+  const newUser = {
+  name,
+  email,
+  password,
+  age,
+  gender,
+  bio,
+  photo: photoPreview || DEFAULT_PHOTO,
+  createdAt: new Date().toISOString(),
+  isPremium: false,
+  premiumUntil: null,
+  likes: [],        // ⬅️ AGREGAR
+  matches: [],      // ⬅️ AGREGAR
+  passes: []        // ⬅️ AGREGAR
+};
 
     const docRef = await addDoc(collection(db, 'users'), newUser);
     newUser.id = docRef.id;
 
     // Guardar en localStorage solo la sesión actual
     localStorage.setItem('canlove_current_user', JSON.stringify(newUser));
-    setCurrentUser(newUser);
+    await saveCurrentUser(newUser); 
     setIsPremium(false);
     
     alert(`¡Bienvenido ${newUser.name}!`);
@@ -658,7 +694,8 @@ const getAvailableProfiles = () => {
     localStorage.setItem('canlove_current_user', JSON.stringify(user));
     setCurrentUser(user);
     setIsPremium(user.isPremium || false);
-    
+    await loadUserInteractions(user.id);
+    await loadConversations(user.id);
     if (emailRef.current) emailRef.current.value = '';
     if (passwordRef.current) passwordRef.current.value = '';
     
@@ -765,30 +802,36 @@ const handleLike = async () => {
     checkAndShowAd();
   };
 
-  const sendMessage = () => {
-    const text = messageInputRef.current?.value?.trim();
-    if (!text || !selectedChat) return;
-    const message = {
-      id: Date.now().toString(),
-      text,
-      senderId: currentUser.id,
-      receiverId: selectedChat.id,
-      timestamp: new Date().toISOString(),
-      read: false
-    };
+  const sendMessage = async () => {
+  const text = messageInputRef.current?.value?.trim();
+  if (!text || !selectedChat) return;
+  
+  const message = {
+    text,
+    senderId: currentUser.id,
+    receiverId: selectedChat.id,
+    timestamp: new Date().toISOString(),
+    read: false
+  };
+  
+  try {
+    // Guardar en Firebase
+    await addDoc(collection(db, 'messages'), message);
+    
+    // Actualizar estado local
     const myConvos = { ...conversations };
     if (!myConvos[selectedChat.id]) myConvos[selectedChat.id] = [];
-    myConvos[selectedChat.id].push(message);
-    saveConversations(currentUser.id, myConvos);
-    const otherUserConvos = JSON.parse(localStorage.getItem(`canlove_conversations_${selectedChat.id}`) || '{}');
-    if (!otherUserConvos[currentUser.id]) otherUserConvos[currentUser.id] = [];
-    otherUserConvos[currentUser.id].push(message);
-    localStorage.setItem(`canlove_conversations_${selectedChat.id}`, JSON.stringify(otherUserConvos));
+    myConvos[selectedChat.id].push({ ...message, id: Date.now().toString() });
+    setConversations(myConvos);
+    
     if (messageInputRef.current) {
       messageInputRef.current.value = '';
       messageInputRef.current.focus();
     }
-  };
+  } catch (error) {
+    console.error('Error enviando mensaje:', error);
+  }
+};
 
   const markAsRead = (matchId) => {
     const myConvos = { ...conversations };
