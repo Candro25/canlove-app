@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Heart, User, Mail, Calendar, Image, LogIn, UserPlus, Home, Sparkles, MessageCircle, X, Send, ArrowLeft, Video, Phone, Mic, MicOff, VideoOff, PhoneOff, Crown, Check, Star } from 'lucide-react';
-import Peer from 'peerjs';
+import AgoraRTC from 'agora-rtc-sdk-ng';
+import { AGORA_APP_ID } from './AgoraConfig';
 import { db } from './firebase';
 import { collection, addDoc, getDocs, query, where, updateDoc, doc, getDoc, onSnapshot } from 'firebase/firestore';
-const DEFAULT_PHOTO = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23FEF3C7" width="200" height="200"/%3E%3Ctext fill="%23D97706" font-family="sans-serif" font-size="16" dy="10.5" font-weight="bold" x="50%25" y="50%25" text-anchor="middle"%3ESin Foto%3C/text%3E%3C/svg%3E';
 
+const DEFAULT_PHOTO = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23FEF3C7" width="200" height="200"/%3E%3Ctext fill="%23D97706" font-family="sans-serif" font-size="16" dy="10.5" font-weight="bold" x="50%25" y="50%25" text-anchor="middle"%3ESin Foto%3C/text%3E%3C/svg%3E';
 const DEMO_USERS = [
   { name: 'Ana García', age: '24', gender: 'mujer', bio: 'Amante del café y los atardeceres. Viajera empedernida 🌎', photo: 'https://i.pravatar.cc/300?img=5' },
   { name: 'Carlos Ruiz', age: '28', gender: 'hombre', bio: 'Chef aficionado y músico. Me encanta cocinar para otros 🍳', photo: 'https://i.pravatar.cc/300?img=12' },
@@ -384,9 +385,6 @@ function CanLoveApp() {
   const [dailyLikesCount, setDailyLikesCount] = useState(0);
   const [showInterstitialAd, setShowInterstitialAd] = useState(false);
   const [profilesViewedCount, setProfilesViewedCount] = useState(0);
-  const [peer, setPeer] = useState(null);
-  const [myPeerId, setMyPeerId] = useState('');
-  const [remotePeerId, setRemotePeerId] = useState('');
   const [currentCall, setCurrentCall] = useState(null);
   const [realtimeUnsubscribe, setRealtimeUnsubscribe] = useState(null);
 
@@ -518,12 +516,10 @@ const loadUserInteractions = async (userId) => {
 
 
 const setupRealtimeListeners = (userId) => {
-  // Limpiar listeners anteriores si existen
   if (realtimeUnsubscribe) {
     realtimeUnsubscribe();
   }
   
-  // Listener para cambios en el perfil del usuario (matches, likes)
   const userRef = doc(db, 'users', userId);
   const unsubscribeUser = onSnapshot(userRef, (docSnapshot) => {
     if (docSnapshot.exists()) {
@@ -534,66 +530,58 @@ const setupRealtimeListeners = (userId) => {
     }
   });
 
-  // Listener para mensajes nuevos
   const messagesRef = collection(db, 'messages');
-  const q1 = query(messagesRef, where('receiverId', '==', userId));
-  const q2 = query(messagesRef, where('senderId', '==', userId));
-  
-  const unsubscribeMessages1 = onSnapshot(q1, (snapshot) => {
-    updateConversationsFromSnapshot(snapshot, userId);
-  });
-  
-  const unsubscribeMessages2 = onSnapshot(q2, (snapshot) => {
-    updateConversationsFromSnapshot(snapshot, userId);
-  });
+  const unsubscribeMessages = onSnapshot(
+    messagesRef,
+    (snapshot) => {
+      updateConversationsFromSnapshot(snapshot, userId); // ✅ Llama a la función
+    }
+  );
 
-  // Crear función de limpieza
   const cleanup = () => {
     unsubscribeUser();
-    unsubscribeMessages1();
-    unsubscribeMessages2();
+    unsubscribeMessages();
   };
   
-  // Guardar la función de limpieza en el estado
   setRealtimeUnsubscribe(() => cleanup);
-  
   return cleanup;
 };
 
+
 const updateConversationsFromSnapshot = (snapshot, userId) => {
-  setConversations(prevConvos => {
-    const convos = { ...prevConvos };
-    
-    snapshot.docChanges().forEach((change) => {
-      if (change.type === 'added' || change.type === 'modified') {
-        const msg = { id: change.doc.id, ...change.doc.data() };
-        const otherUserId = msg.senderId === userId ? msg.receiverId : msg.senderId;
-        
-        if (!convos[otherUserId]) convos[otherUserId] = [];
-        
-        // Evitar duplicados
-        const existingIndex = convos[otherUserId].findIndex(m => m.id === msg.id);
-        if (existingIndex >= 0) {
-          convos[otherUserId][existingIndex] = msg;
-        } else {
-          convos[otherUserId].push(msg);
-        }
-        
-        // Ordenar por timestamp
-        convos[otherUserId].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-      }
-    });
-    
-    // Actualizar contadores de no leídos
-    const unread = {};
-    Object.keys(convos).forEach(matchId => {
-      const unreadCount = convos[matchId].filter(msg => !msg.read && msg.receiverId === userId).length;
-      if (unreadCount > 0) unread[matchId] = unreadCount;
-    });
-    setUnreadCounts(unread);
-    
-    return convos;
+  const allMessages = [];
+  
+  snapshot.forEach((doc) => {
+    const data = doc.data();
+    if (data.senderId === userId || data.receiverId === userId) {
+      allMessages.push({ id: doc.id, ...data });
+    }
   });
+  
+  // Organizar por conversación
+  const convos = {};
+  allMessages.forEach(msg => {
+    const otherUserId = msg.senderId === userId ? msg.receiverId : msg.senderId;
+    if (!convos[otherUserId]) convos[otherUserId] = [];
+    convos[otherUserId].push(msg);
+  });
+  
+  // Ordenar mensajes por timestamp
+  Object.keys(convos).forEach(key => {
+    convos[key].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  });
+  
+  setConversations(convos);  // ✅ BIEN - uso directo
+  
+  // Calcular no leídos
+  const unread = {};
+  Object.keys(convos).forEach(matchId => {
+    const unreadCount = convos[matchId].filter(
+      msg => !msg.read && msg.receiverId === userId
+    ).length;
+    if (unreadCount > 0) unread[matchId] = unreadCount;
+  });
+  setUnreadCounts(unread);
 };
 
   const saveUserInteractions = async (userId, newLikes, newPasses, newMatches) => {
@@ -614,6 +602,250 @@ const updateConversationsFromSnapshot = (snapshot, userId) => {
   }
 };
 
+// Dentro de tu componente, agrega estos estados
+const [agoraClient, setAgoraClient] = useState(null);
+const [remoteUsers, setRemoteUsers] = useState([]);
+
+// Inicializar Agora cuando el usuario haga login
+const initializeAgora = async () => {
+  const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+  
+  client.on('user-published', async (user, mediaType) => {
+    await client.subscribe(user, mediaType);
+    
+    if (mediaType === 'video') {
+      setRemoteUsers(prev => [...prev, user]);
+    }
+    
+    if (mediaType === 'audio') {
+      user.audioTrack.play();
+    }
+  });
+  
+  client.on('user-unpublished', (user) => {
+    setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
+  });
+  
+  setAgoraClient(client);
+};
+
+// Llamar esta función en saveCurrentUser después de setCurrentUser
+useEffect(() => {
+  if (currentUser && !agoraClient) {
+    initializeAgora();
+  }
+  
+  // Cleanup al cerrar sesión
+  return () => {
+    if (agoraClient) {
+      agoraClient.leave();
+      setAgoraClient(null);
+    }
+  };
+}, [currentUser]);
+
+// Nueva función para iniciar videollamada
+const startVideoCall = async () => {
+  if (!agoraClient || !selectedChat) {
+    alert('No se pudo iniciar la llamada');
+    return;
+  }
+  
+  try {
+    const channelName = [currentUser.id, selectedChat.id].sort().join('-');
+    
+    // Unirse al canal
+    await agoraClient.join(AGORA_APP_ID, channelName, null, currentUser.id);
+    
+    // Crear tracks locales
+    const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
+    
+    setLocalStream({ audioTrack, videoTrack });
+    
+    // Publicar tracks
+    await agoraClient.publish([audioTrack, videoTrack]);
+    
+    setIsInCall(true);
+    setCallPartner(selectedChat);
+    
+    // Reproducir video local
+    videoTrack.play('local-video');
+    
+  } catch (error) {
+    console.error('Error en videollamada:', error);
+    alert('Error al iniciar videollamada: ' + error.message);
+  }
+};
+
+// Nueva función para iniciar llamada de audio
+const startAudioCall = async () => {
+  if (!agoraClient || !selectedChat) {
+    alert('No se pudo iniciar la llamada');
+    return;
+  }
+  
+  try {
+    const channelName = [currentUser.id, selectedChat.id].sort().join('-');
+    
+    await agoraClient.join(AGORA_APP_ID, channelName, null, currentUser.id);
+    
+    const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+    
+    setLocalStream({ audioTrack });
+    
+    await agoraClient.publish([audioTrack]);
+    
+    setIsInCall(true);
+    setIsVideoOff(true);
+    setCallPartner(selectedChat);
+    
+  } catch (error) {
+    console.error('Error en llamada:', error);
+    alert('Error al iniciar llamada: ' + error.message);
+  }
+};
+
+// Nueva función para terminar llamada
+const endCall = async () => {
+  try {
+    if (localStream) {
+      if (localStream.audioTrack) {
+        localStream.audioTrack.stop();
+        localStream.audioTrack.close();
+      }
+      if (localStream.videoTrack) {
+        localStream.videoTrack.stop();
+        localStream.videoTrack.close();
+      }
+    }
+    
+    if (agoraClient) {
+      await agoraClient.leave();
+    }
+    
+    setLocalStream(null);
+    setRemoteUsers([]);
+    setIsInCall(false);
+    setIsMuted(false);
+    setIsVideoOff(false);
+    setCallPartner(null);
+  } catch (error) {
+    console.error('Error al terminar llamada:', error);
+  }
+};
+
+// Toggle mute
+const toggleMute = async () => {
+  if (localStream && localStream.audioTrack) {
+    await localStream.audioTrack.setEnabled(isMuted);
+    setIsMuted(!isMuted);
+  }
+};
+
+// Toggle video
+const toggleVideo = async () => {
+  if (localStream && localStream.videoTrack) {
+    await localStream.videoTrack.setEnabled(isVideoOff);
+    setIsVideoOff(!isVideoOff);
+  }
+};
+
+// Componente de VideoCallScreen actualizado
+const VideoCallScreen = () => {
+  const localVideoRef = useRef(null);
+  const remoteVideoRef = useRef(null);
+  
+  useEffect(() => {
+    // Reproducir video local
+    if (localStream && localStream.videoTrack && localVideoRef.current && !isVideoOff) {
+      localStream.videoTrack.play(localVideoRef.current);
+    }
+    
+    // Reproducir video remoto
+    if (remoteUsers.length > 0 && remoteUsers[0].videoTrack && remoteVideoRef.current) {
+      remoteUsers[0].videoTrack.play(remoteVideoRef.current);
+    }
+    
+    // Cleanup al desmontar
+    return () => {
+      if (localStream && localStream.videoTrack) {
+        localStream.videoTrack.stop();
+      }
+    };
+  }, [localStream, remoteUsers, isVideoOff]);
+  
+  if (!isInCall || !callPartner) return null;
+  
+  return (
+    <div className="fixed inset-0 bg-black z-50 flex flex-col">
+      {/* Header */}
+      <div className="bg-gradient-to-b from-black to-transparent p-6 text-white">
+        <div className="text-center">
+          <img src={callPartner.photo} alt={callPartner.name} className="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-amber-400 shadow-lg" />
+          <h2 className="text-2xl font-bold">{callPartner.name}</h2>
+          <p className="text-sm opacity-75">
+            {remoteUsers.length > 0 ? 'Conectado' : 'Llamando...'}
+          </p>
+        </div>
+      </div>
+      
+      {/* Video principal (remoto) */}
+      <div className="flex-1 flex items-center justify-center relative bg-gray-900">
+        {remoteUsers.length > 0 && !isVideoOff ? (
+          <div 
+            ref={remoteVideoRef} 
+            className="w-full h-full"
+            style={{ width: '100%', height: '100%' }}
+          />
+        ) : (
+          <div className="text-center">
+            <div className="w-32 h-32 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+              <User className="w-16 h-16 text-gray-500" />
+            </div>
+            <p className="text-white">
+              {remoteUsers.length === 0 ? 'Esperando...' : 'Cámara desactivada'}
+            </p>
+          </div>
+        )}
+        
+        {/* Video local (miniatura) */}
+        {!isVideoOff && (
+          <div className="absolute top-4 right-4 w-32 h-48 bg-gray-900 rounded-lg overflow-hidden shadow-2xl border-2 border-amber-400">
+            <div 
+              ref={localVideoRef} 
+              className="w-full h-full"
+              style={{ width: '100%', height: '100%' }}
+            />
+          </div>
+        )}
+      </div>
+      
+      {/* Controles */}
+      <div className="bg-gradient-to-t from-black to-transparent p-8">
+        <div className="flex justify-center gap-4">
+          <button 
+            onClick={toggleMute} 
+            className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 transform hover:scale-110 ${isMuted ? 'bg-red-500' : 'bg-gray-700 hover:bg-gray-600'}`}
+          >
+            {isMuted ? <MicOff className="w-6 h-6 text-white" /> : <Mic className="w-6 h-6 text-white" />}
+          </button>
+          <button 
+            onClick={toggleVideo} 
+            className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 transform hover:scale-110 ${isVideoOff ? 'bg-red-500' : 'bg-gray-700 hover:bg-gray-600'}`}
+          >
+            {isVideoOff ? <VideoOff className="w-6 h-6 text-white" /> : <Video className="w-6 h-6 text-white" />}
+          </button>
+          <button 
+            onClick={endCall} 
+            className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-all duration-300 transform hover:scale-110 shadow-xl"
+          >
+            <PhoneOff className="w-8 h-8 text-white" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
  const saveCurrentUser = async (user) => {
   try {
     localStorage.setItem('canlove_current_user', JSON.stringify(user));
@@ -623,59 +855,7 @@ const updateConversationsFromSnapshot = (snapshot, userId) => {
     await loadUserInteractions(user.id);
     await loadConversations(user.id);
     setupRealtimeListeners(user.id);
-    if (!peer) {
-      // ⬇️ REEMPLAZAR ESTA CONFIGURACIÓN
-      const newPeer = new Peer(user.id, {
-        host: 'peerjs-server.herokuapp.com',
-        secure: true,
-        port: 443,
-        config: {
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:global.stun.twilio.com:3478' }
-          ]
-        }
-      });
-      // ⬆️
-      
-      newPeer.on('open', (id) => {
-        console.log('Mi Peer ID:', id);
-        setMyPeerId(id);
-      });
-      
-      newPeer.on('error', (err) => {
-        console.error('Error de Peer:', err);
-        // Intentar reconectar
-        setTimeout(() => {
-          if (!peer || peer.disconnected) {
-            newPeer.reconnect();
-          }
-        }, 3000);
-      });
-      
-      newPeer.on('call', (call) => {
-        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-          .then((stream) => {
-            setLocalStream(stream);
-            call.answer(stream);
-            
-            call.on('stream', (remoteStream) => {
-              console.log('Stream remoto recibido');
-            });
-            
-            setCurrentCall(call);
-            setIsInCall(true);
-            setCallPartner(selectedChat);
-          })
-          .catch((err) => {
-            console.error('Error al responder llamada:', err);
-            alert('No se pudo acceder a la cámara/micrófono');
-          });
-      });
-      
-      setPeer(newPeer);
-    }
-    
+  
   } catch (error) {
     console.error('Error guardando sesión:', error);
   }
@@ -811,10 +991,6 @@ const updateConversationsFromSnapshot = (snapshot, userId) => {
 const handleLogout = () => {
   if (!window.confirm('¿Seguro que quieres cerrar sesión?')) return;
   
-  if (peer) {
-    peer.destroy();
-    setPeer(null);
-  }
   
   localStorage.removeItem('canlove_current_user');
   setCurrentUser(null);
@@ -993,108 +1169,9 @@ const markAsRead = async (matchId) => {  // ⬅️ Agregar async
     return Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
   };
 
- const startVideoCall = async () => {
-  if (!peer) {
-    alert('Conexión de red no disponible');
-    return;
-  }
-  
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    setLocalStream(stream);
-    
-    // Llamar al peer del otro usuario
-    const call = peer.call(selectedChat.id, stream);
-    
-    call.on('stream', (remoteStream) => {
-      // El stream remoto se manejará en VideoCallScreen
-      console.log('Stream remoto recibido');
-    });
-    
-    call.on('close', () => {
-      endCall();
-    });
-    
-    setCurrentCall(call);
-    setIsInCall(true);
-    setCallPartner(selectedChat);
-    
-    // Enviar notificación al otro usuario
-    alert(`Llamando a ${selectedChat.name}...`);
-  } catch (error) {
-    console.error('Error en videollamada:', error);
-    alert('No se pudo acceder a la cámara/micrófono');
-  }
-};
 
-  const startAudioCall = async () => {
-  if (!peer) {
-    alert('Conexión de red no disponible');
-    return;
-  }
-  
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
-    setLocalStream(stream);
-    
-    // Llamar al peer del otro usuario
-    const call = peer.call(selectedChat.id, stream);
-    
-    call.on('stream', (remoteStream) => {
-      console.log('Audio remoto recibido');
-    });
-    
-    call.on('close', () => {
-      endCall();
-    });
-    
-    setCurrentCall(call);
-    setIsInCall(true);
-    setIsVideoOff(true);
-    setCallPartner(selectedChat);
-    
-    alert(`Llamando a ${selectedChat.name}...`);
-  } catch (error) {
-    console.error('Error en llamada de audio:', error);
-    alert('No se pudo acceder al micrófono');
-  }
-};
-  const endCall = () => {
-  if (localStream) {
-    localStream.getTracks().forEach(track => track.stop());
-  }
-  
-  if (currentCall) {
-    currentCall.close();
-  }
-  
-  setLocalStream(null);
-  setCurrentCall(null);
-  setIsInCall(false);
-  setIsMuted(false);
-  setIsVideoOff(false);
-  setCallPartner(null);
-};
 
-  const toggleMute = () => {
-    if (localStream) {
-      const audioTrack = localStream.getAudioTracks()[0];
-      if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-        setIsMuted(!audioTrack.enabled);
-      }
-    }
-  };
 
-  const toggleVideo = () => {
-    if (localStream) {
-      const videoTrack = localStream.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-        setIsVideoOff(!videoTrack.enabled);
-      }
-    }
-  };
 
   const upgradeToPremium = () => {
     const confirmPayment = window.confirm('💳 PAGO SIMULADO\n\nPlan Premium: $9.99/mes\n\n¿Confirmar?');
@@ -1198,69 +1275,7 @@ const markAsRead = async (matchId) => {  // ⬅️ Agregar async
     );
   };
 
-  const VideoCallScreen = () => {
-  const videoRef = useRef(null);
-  const remoteVideoRef = useRef(null);
   
-  useEffect(() => {
-    if (localStream && videoRef.current && !isVideoOff) {
-      videoRef.current.srcObject = localStream;
-    }
-    
-    // Manejar el stream remoto
-    if (currentCall) {
-      currentCall.on('stream', (remoteStream) => {
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = remoteStream;
-        }
-      });
-    }
-  }, [localStream, isVideoOff, currentCall]);
-  
-  if (!isInCall || !callPartner) return null;
-  
-  return (
-    <div className="fixed inset-0 bg-black z-50 flex flex-col">
-      <div className="bg-gradient-to-b from-black to-transparent p-6 text-white">
-        <div className="text-center">
-          <img src={callPartner.photo} alt={callPartner.name} className="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-amber-400 shadow-lg" />
-          <h2 className="text-2xl font-bold">{callPartner.name}</h2>
-          <p className="text-sm opacity-75">En llamada...</p>
-        </div>
-      </div>
-      <div className="flex-1 flex items-center justify-center relative">
-        {isVideoOff ? (
-          <div className="text-center">
-            <div className="w-32 h-32 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-              <User className="w-16 h-16 text-gray-500" />
-            </div>
-            <p className="text-white">Cámara desactivada</p>
-          </div>
-        ) : (
-          <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
-        )}
-        {!isVideoOff && (
-          <div className="absolute top-4 right-4 w-32 h-48 bg-gray-900 rounded-lg overflow-hidden shadow-2xl border-2 border-amber-400">
-            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1]" />
-          </div>
-        )}
-      </div>
-      <div className="bg-gradient-to-t from-black to-transparent p-8">
-        <div className="flex justify-center gap-4">
-          <button onClick={toggleMute} className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 transform hover:scale-110 ${isMuted ? 'bg-red-500' : 'bg-gray-700 hover:bg-gray-600'}`}>
-            {isMuted ? <MicOff className="w-6 h-6 text-white" /> : <Mic className="w-6 h-6 text-white" />}
-          </button>
-          <button onClick={toggleVideo} className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 transform hover:scale-110 ${isVideoOff ? 'bg-red-500' : 'bg-gray-700 hover:bg-gray-600'}`}>
-            {isVideoOff ? <VideoOff className="w-6 h-6 text-white" /> : <Video className="w-6 h-6 text-white" />}
-          </button>
-          <button onClick={endCall} className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-all duration-300 transform hover:scale-110 shadow-xl">
-            <PhoneOff className="w-8 h-8 text-white" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
   const MatchModal = () => {
     if (!showMatchModal || !newMatch) return null;
     return (
