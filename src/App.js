@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Heart, User, Mail, Calendar, Image, LogIn, UserPlus, Home, Sparkles, MessageCircle, X, Send, ArrowLeft, Video, Phone, Mic, MicOff, VideoOff, PhoneOff, Crown, Check, Star } from 'lucide-react';
 import Peer from 'peerjs';
 import { db } from './firebase';
-import { collection, addDoc, getDocs, query, where, updateDoc, doc, getDoc } from 'firebase/firestore';
-
+import { collection, addDoc, getDocs, query, where, updateDoc, doc, getDoc, onSnapshot } from 'firebase/firestore';
 const DEFAULT_PHOTO = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23FEF3C7" width="200" height="200"/%3E%3Ctext fill="%23D97706" font-family="sans-serif" font-size="16" dy="10.5" font-weight="bold" x="50%25" y="50%25" text-anchor="middle"%3ESin Foto%3C/text%3E%3C/svg%3E';
 
 const DEMO_USERS = [
@@ -18,6 +17,7 @@ const DEMO_USERS = [
   { name: 'Valentina Cruz', age: '22', gender: 'mujer', bio: 'Estudiante de medicina. Salvar vidas es mi pasión ❤️', photo: 'https://i.pravatar.cc/300?img=23' },
   { name: 'Fernando Díaz', age: '31', gender: 'hombre', bio: 'Arquitecto. Construyo sueños, uno a la vez 🗿', photo: 'https://i.pravatar.cc/300?img=51' }
 ];
+
 
 // Componente de Términos y Condiciones como página separada
 const TermsPage = () => {
@@ -388,6 +388,7 @@ function CanLoveApp() {
   const [myPeerId, setMyPeerId] = useState('');
   const [remotePeerId, setRemotePeerId] = useState('');
   const [currentCall, setCurrentCall] = useState(null);
+  const [realtimeUnsubscribe, setRealtimeUnsubscribe] = useState(null);
 
   const nameRef = useRef(null);
   const emailRef = useRef(null);
@@ -515,6 +516,86 @@ const loadUserInteractions = async (userId) => {
   }
 };
 
+
+const setupRealtimeListeners = (userId) => {
+  // Limpiar listeners anteriores si existen
+  if (realtimeUnsubscribe) {
+    realtimeUnsubscribe();
+  }
+  
+  // Listener para cambios en el perfil del usuario (matches, likes)
+  const userRef = doc(db, 'users', userId);
+  const unsubscribeUser = onSnapshot(userRef, (docSnapshot) => {
+    if (docSnapshot.exists()) {
+      const userData = docSnapshot.data();
+      setLikes(userData.likes || []);
+      setMatches(userData.matches || []);
+      setPasses(userData.passes || []);
+    }
+  });
+
+  // Listener para mensajes nuevos
+  const messagesRef = collection(db, 'messages');
+  const q1 = query(messagesRef, where('receiverId', '==', userId));
+  const q2 = query(messagesRef, where('senderId', '==', userId));
+  
+  const unsubscribeMessages1 = onSnapshot(q1, (snapshot) => {
+    updateConversationsFromSnapshot(snapshot, userId);
+  });
+  
+  const unsubscribeMessages2 = onSnapshot(q2, (snapshot) => {
+    updateConversationsFromSnapshot(snapshot, userId);
+  });
+
+  // Crear función de limpieza
+  const cleanup = () => {
+    unsubscribeUser();
+    unsubscribeMessages1();
+    unsubscribeMessages2();
+  };
+  
+  // Guardar la función de limpieza en el estado
+  setRealtimeUnsubscribe(() => cleanup);
+  
+  return cleanup;
+};
+
+const updateConversationsFromSnapshot = (snapshot, userId) => {
+  setConversations(prevConvos => {
+    const convos = { ...prevConvos };
+    
+    snapshot.docChanges().forEach((change) => {
+      if (change.type === 'added' || change.type === 'modified') {
+        const msg = { id: change.doc.id, ...change.doc.data() };
+        const otherUserId = msg.senderId === userId ? msg.receiverId : msg.senderId;
+        
+        if (!convos[otherUserId]) convos[otherUserId] = [];
+        
+        // Evitar duplicados
+        const existingIndex = convos[otherUserId].findIndex(m => m.id === msg.id);
+        if (existingIndex >= 0) {
+          convos[otherUserId][existingIndex] = msg;
+        } else {
+          convos[otherUserId].push(msg);
+        }
+        
+        // Ordenar por timestamp
+        convos[otherUserId].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      }
+    });
+    
+    // Actualizar contadores de no leídos
+    const unread = {};
+    Object.keys(convos).forEach(matchId => {
+      const unreadCount = convos[matchId].filter(msg => !msg.read && msg.receiverId === userId).length;
+      if (unreadCount > 0) unread[matchId] = unreadCount;
+    });
+    setUnreadCounts(unread);
+    
+    return convos;
+  });
+};
+
   const saveUserInteractions = async (userId, newLikes, newPasses, newMatches) => {
   try {
     const userRef = doc(db, 'users', userId);
@@ -533,28 +614,45 @@ const loadUserInteractions = async (userId) => {
   }
 };
 
-  const saveCurrentUser = async (user) => {
-    try {
-      localStorage.setItem('canlove_current_user', JSON.stringify(user));
-      setCurrentUser(user);
-      setIsPremium(user.isPremium || false);
-     await loadUserInteractions(user.id);
-    await loadConversations(user.id);
+ const saveCurrentUser = async (user) => {
+  try {
+    localStorage.setItem('canlove_current_user', JSON.stringify(user));
+    setCurrentUser(user);
+    setIsPremium(user.isPremium || false);
     
-      if (!peer) {
+    await loadUserInteractions(user.id);
+    await loadConversations(user.id);
+    setupRealtimeListeners(user.id);
+    if (!peer) {
+      // ⬇️ REEMPLAZAR ESTA CONFIGURACIÓN
       const newPeer = new Peer(user.id, {
-        host: '0.peerjs.com',
+        host: 'peerjs-server.herokuapp.com',
+        secure: true,
         port: 443,
-        path: '/',
-        secure: true
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:global.stun.twilio.com:3478' }
+          ]
+        }
       });
+      // ⬆️
       
       newPeer.on('open', (id) => {
         console.log('Mi Peer ID:', id);
         setMyPeerId(id);
       });
       
-      // Recibir llamadas entrantes
+      newPeer.on('error', (err) => {
+        console.error('Error de Peer:', err);
+        // Intentar reconectar
+        setTimeout(() => {
+          if (!peer || peer.disconnected) {
+            newPeer.reconnect();
+          }
+        }, 3000);
+      });
+      
       newPeer.on('call', (call) => {
         navigator.mediaDevices.getUserMedia({ video: true, audio: true })
           .then((stream) => {
@@ -562,7 +660,7 @@ const loadUserInteractions = async (userId) => {
             call.answer(stream);
             
             call.on('stream', (remoteStream) => {
-              // El stream remoto se manejará en VideoCallScreen
+              console.log('Stream remoto recibido');
             });
             
             setCurrentCall(call);
@@ -582,7 +680,6 @@ const loadUserInteractions = async (userId) => {
     console.error('Error guardando sesión:', error);
   }
 };
-
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -696,6 +793,7 @@ const loadUserInteractions = async (userId) => {
     setIsPremium(user.isPremium || false);
     await loadUserInteractions(user.id);
     await loadConversations(user.id);
+    setupRealtimeListeners(user.id);
     if (emailRef.current) emailRef.current.value = '';
     if (passwordRef.current) passwordRef.current.value = '';
     
